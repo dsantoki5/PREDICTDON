@@ -5,7 +5,10 @@ Provides prediction and Root Cause Analysis (RCA) diagnostics.
 import os
 import joblib
 from typing import Dict, Any, Optional
-from .feature_engineering import engineer_features, create_feature_dataframe
+try:
+    from .feature_engineering import engineer_features, create_feature_dataframe
+except (ImportError, ValueError):
+    from feature_engineering import engineer_features, create_feature_dataframe
 
 class PredictCNCEngine:
     def __init__(self, model_path: Optional[str] = None):
