@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Text
+from sqlalchemy import Column, Integer, String, Float, Numeric, DateTime, ForeignKey
 from src.database.session import Base
 
 class Prediction(Base):
@@ -21,6 +21,11 @@ class Prediction(Base):
     air_temp_mean_10 = Column(Float, nullable=True)
     prediction = Column(String(50), nullable=False)
     probability = Column(Float, nullable=False)
-    risk_level = Column(String(20), default="Low")
-    diagnosis_summary = Column(Text, nullable=True)
+    healthy_probability = Column(Float, nullable=True)
+    warning_probability = Column(Float, nullable=True)
+    critical_probability = Column(Float, nullable=True)
+    confidence = Column(Numeric(5, 2), nullable=True)
+    process_temp_mean_10 = Column(Float, nullable=True)
+    rpm_std_10 = Column(Float, nullable=True)
+    torque_std_10 = Column(Float, nullable=True)
     predicted_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), index=True)

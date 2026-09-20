@@ -8,7 +8,7 @@ class MaintenanceTicket(Base):
     id = Column(Integer, primary_key=True, index=True)
     machine_id = Column(Integer, ForeignKey("machines.id"), nullable=False, index=True)
     prediction_id = Column(Integer, ForeignKey("predictions.id"), nullable=True, index=True)
-    priority = Column(String(20), default="Medium") # High, Medium, Low
-    status = Column(String(20), default="Pending", index=True) # Pending, In Progress, Completed
+    priority = Column(String(20), default="High")
+    status = Column(String(20), default="Pending", index=True)
     remarks = Column(Text, nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), index=True)
