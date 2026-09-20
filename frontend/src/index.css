@@ -1,0 +1,18 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-ink-950 text-slate-100 font-sans antialiased selection:bg-cnc-blue selection:text-white;
+    min-height: 100vh;
+  }
+}
+
+.gauge-card {
+  @apply relative overflow-hidden rounded-xl border border-ink-line bg-ink-800/90 p-5 backdrop-blur transition-all duration-200 hover:border-cnc-blue/50 hover:shadow-lg hover:shadow-cnc-blue/5;
+}
+
+.gauge-signal {
+  @apply absolute top-0 left-0 right-0 h-[2px];
+}
