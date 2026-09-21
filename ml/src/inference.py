@@ -31,10 +31,16 @@ class Predictor:
         return cls._instance
 
     def _load_model(self):
+        if self._model is not None:
+            return
         base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         model_path = os.path.join(base_dir, "models", "LightGBM_No_SMOTE_Final.joblib")
         if not os.path.exists(model_path):
-            raise FileNotFoundError(f"Authoritative model artifact not found at {model_path}")
+            alt_path = os.path.join(base_dir, "models", "final_lightgbm_model.pkl")
+            if os.path.exists(alt_path):
+                model_path = alt_path
+            else:
+                raise FileNotFoundError(f"Authoritative model artifact not found at {model_path}")
         self._model = joblib.load(model_path)
         self.model_version = "LightGBM_No_SMOTE_Final v4.2"
         self.features_count = len(MODEL_FEATURES_44)
@@ -54,6 +60,8 @@ class Predictor:
         """
         Runs multi-class inference and generates root-cause telemetry diagnosis.
         """
+        if self._model is None:
+            self._load_model()
         # 1. Feature Engineering
         feats = engineer_features_44(
             air_temp=air_temp,
