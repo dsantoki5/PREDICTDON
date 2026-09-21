@@ -1,196 +1,43 @@
 """
 Inference Engine for PredictCNC
-Provides prediction and Root Cause Analysis (RCA) diagnostics.
+Encapsulates model loading, validation, multi-class inference, and Root Cause Analysis (RCA).
+Uses LightGBM_No_SMOTE_Final.joblib.
 """
 import os
 import joblib
-from typing import Dict, Any, Optional
-try:
-    from .feature_engineering import engineer_features, create_feature_dataframe
-except (ImportError, ValueError):
-    from feature_engineering import engineer_features, create_feature_dataframe
+import numpy as np
+import pandas as pd
+from typing import Dict, Any, Tuple, Optional
+from ml.src.feature_engineering import engineer_features_44, create_feature_dataframe_44, MODEL_FEATURES_44
 
-class PredictCNCEngine:
-    def __init__(self, model_path: Optional[str] = None):
-        if model_path is None:
-            base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-            model_path = os.path.join(base_dir, "models", "final_lightgbm_model.pkl")
-        self.model_path = model_path
-        self.model = joblib.load(model_path)
+# Authoritative class labels
+CLASS_LABELS = {
+    0: "Normal Operation",
+    1: "Degraded / Thermal-Mechanical Anomaly",
+    2: "Critical Machine Failure"
+}
 
-    def diagnose_root_causes(
-        self,
-        rotational_speed: float,
-        torque: float,
-        tool_wear: float,
-        temperature_difference: float,
-        rpm_torque_interaction: float,
-        load_stress: float
-    ) -> Dict[str, Any]:
-        causes = []
-        components = []
-        maintenance = []
-        analysis_table = []
-        risk_score = 0
+class Predictor:
+    """
+    PredictCNC ML Inference Engine for LightGBM_No_SMOTE_Final.joblib.
+    """
+    _instance = None
+    _model = None
 
-        if rotational_speed >= 2100:
-            risk_score += 20
-            causes.append("Very high spindle speed detected.")
-            components.extend(["Spindle", "Main Bearings"])
-            maintenance.extend(["Reduce spindle speed.", "Inspect spindle bearings.", "Check spindle lubrication."])
-            analysis_table.append({
-                "parameter": "Rotational Speed",
-                "current": f"{rotational_speed:.0f} RPM",
-                "normal": "1200 - 1800 RPM",
-                "status": "Critical",
-                "effect": "Overspeed causing spindle stress"
-            })
-        elif rotational_speed >= 1800:
-            risk_score += 10
-            causes.append("High spindle speed.")
-            components.append("Spindle")
-            maintenance.append("Monitor spindle speed.")
-            analysis_table.append({
-                "parameter": "Rotational Speed",
-                "current": f"{rotational_speed:.0f} RPM",
-                "normal": "1200 - 1800 RPM",
-                "status": "High",
-                "effect": "High spindle load"
-            })
-        else:
-            analysis_table.append({
-                "parameter": "Rotational Speed",
-                "current": f"{rotational_speed:.0f} RPM",
-                "normal": "1200 - 1800 RPM",
-                "status": "Normal",
-                "effect": "Stable spindle operation"
-            })
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super(Predictor, cls).__new__(cls)
+            cls._instance._load_model()
+        return cls._instance
 
-        if torque >= 60:
-            risk_score += 20
-            causes.append("Excessive cutting load detected.")
-            components.extend(["Drive Motor", "Drive Shaft"])
-            maintenance.extend(["Inspect drive motor.", "Reduce machining load."])
-            analysis_table.append({
-                "parameter": "Torque",
-                "current": f"{torque:.1f} Nm",
-                "normal": "20 - 45 Nm",
-                "status": "Critical",
-                "effect": "Excessive cutting load on motor and drive shaft"
-            })
-        elif torque >= 45:
-            risk_score += 10
-            causes.append("High cutting load detected due to increased torque.")
-            components.extend(["Drive Motor", "Drive Shaft"])
-            maintenance.extend(["Monitor cutting load.", "Inspect drive motor."])
-            analysis_table.append({
-                "parameter": "Torque",
-                "current": f"{torque:.1f} Nm",
-                "normal": "20 - 45 Nm",
-                "status": "High",
-                "effect": "Motor load is higher than recommended"
-            })
-        else:
-            analysis_table.append({
-                "parameter": "Torque",
-                "current": f"{torque:.1f} Nm",
-                "normal": "20 - 45 Nm",
-                "status": "Normal",
-                "effect": "Normal cutting load"
-            })
-
-        if tool_wear >= 180:
-            risk_score += 25
-            causes.append("Cutting tool has exceeded its safe operating life.")
-            components.extend(["Cutting Tool", "Tool Holder"])
-            maintenance.extend(["Replace cutting tool immediately.", "Inspect tool holder alignment."])
-            analysis_table.append({
-                "parameter": "Tool Wear",
-                "current": f"{tool_wear:.0f} min",
-                "normal": "0 - 120 min",
-                "status": "Critical",
-                "effect": "Severe tool wear increases failure risk and reduces machining accuracy."
-            })
-        elif tool_wear >= 120:
-            risk_score += 15
-            causes.append("Tool wear has reached the recommended maintenance threshold.")
-            components.extend(["Cutting Tool", "Tool Holder"])
-            maintenance.extend(["Schedule tool replacement.", "Inspect tool holder."])
-            analysis_table.append({
-                "parameter": "Tool Wear",
-                "current": f"{tool_wear:.0f} min",
-                "normal": "0 - 120 min",
-                "status": "High",
-                "effect": "Tool performance is degrading."
-            })
-        else:
-            analysis_table.append({
-                "parameter": "Tool Wear",
-                "current": f"{tool_wear:.0f} min",
-                "normal": "0 - 120 min",
-                "status": "Normal",
-                "effect": "Tool condition is within safe limits."
-            })
-
-        if temperature_difference >= 11.5:
-            risk_score += 18
-            causes.append("Process temperature is significantly higher than air temperature.")
-            components.extend(["Cooling System", "Coolant Pump"])
-            maintenance.extend(["Inspect coolant circulation.", "Check coolant level.", "Clean cooling channels."])
-            analysis_table.append({
-                "parameter": "Temperature Difference",
-                "current": f"{temperature_difference:.2f} K",
-                "normal": "8 - 10.5 K",
-                "status": "Critical",
-                "effect": "Cooling system efficiency has reduced."
-            })
-        elif temperature_difference >= 10.5:
-            risk_score += 8
-            components.extend(["Cooling System", "Coolant Pump"])
-            maintenance.extend(["Check coolant level.", "Inspect cooling system."])
-            analysis_table.append({
-                "parameter": "Temperature Difference",
-                "current": f"{temperature_difference:.2f} K",
-                "normal": "8 - 10.5 K",
-                "status": "High",
-                "effect": "Machine is operating under thermal stress."
-            })
-        else:
-            analysis_table.append({
-                "parameter": "Temperature Difference",
-                "current": f"{temperature_difference:.2f} K",
-                "normal": "8 - 10.5 K",
-                "status": "Normal",
-                "effect": "Cooling system operating normally."
-            })
-
-        if rpm_torque_interaction >= 70000:
-            risk_score += 20
-        elif rpm_torque_interaction >= 55000:
-            risk_score += 10
-
-        if load_stress >= 35:
-            risk_score += 15
-        elif load_stress >= 20:
-            risk_score += 8
-
-        if risk_score >= 70:
-            diagnosis = "Critical"
-        elif risk_score >= 40:
-            diagnosis = "High"
-        elif risk_score >= 20:
-            diagnosis = "Moderate"
-        else:
-            diagnosis = "Low"
-
-        return {
-            "risk_score": min(risk_score, 100),
-            "diagnosis": diagnosis,
-            "causes": list(dict.fromkeys(causes)),
-            "components": list(dict.fromkeys(components)),
-            "maintenance": list(dict.fromkeys(maintenance)),
-            "analysis_table": analysis_table
-        }
+    def _load_model(self):
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        model_path = os.path.join(base_dir, "models", "LightGBM_No_SMOTE_Final.joblib")
+        if not os.path.exists(model_path):
+            raise FileNotFoundError(f"Authoritative model artifact not found at {model_path}")
+        self._model = joblib.load(model_path)
+        self.model_version = "LightGBM_No_SMOTE_Final v4.2"
+        self.features_count = len(MODEL_FEATURES_44)
 
     def predict(
         self,
@@ -199,61 +46,198 @@ class PredictCNCEngine:
         rotational_speed: float,
         torque: float,
         tool_wear: float,
-        tool_wear_mean_10: Optional[float] = None,
-        air_temp_mean_10: Optional[float] = None
+        machine_type: str = "L",
+        shift: str = "Morning",
+        humidity: float = 60.0,
+        rolling_history: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
-        features = engineer_features(
+        """
+        Runs multi-class inference and generates root-cause telemetry diagnosis.
+        """
+        # 1. Feature Engineering
+        feats = engineer_features_44(
             air_temp=air_temp,
             process_temp=process_temp,
             rotational_speed=rotational_speed,
             torque=torque,
             tool_wear=tool_wear,
-            tool_wear_mean_10=tool_wear_mean_10,
-            air_temp_mean_10=air_temp_mean_10
+            machine_type=machine_type,
+            shift=shift,
+            humidity=humidity,
+            rolling_history=rolling_history
         )
-        X = create_feature_dataframe(features)
-        pred_label = int(self.model.predict(X)[0])
-        probabilities = self.model.predict_proba(X)[0]
-        normal_prob = round(float(probabilities[0]) * 100.0, 2)
-        failure_prob = round(float(probabilities[1]) * 100.0, 2)
+        X = create_feature_dataframe_44(feats)
 
-        is_failure = pred_label == 1
-        prediction_text = "Machine Failure" if is_failure else "Normal Operation"
-        risk_level = "High" if is_failure else "Low"
+        # 2. Inference & Multi-Class Probability
+        pred_class = int(self._model.predict(X)[0])
+        probabilities = self._model.predict_proba(X)[0]  # shape: (3,)
 
-        if failure_prob >= 70:
-            machine_status = "Critical"
-        elif failure_prob >= 30:
-            machine_status = "Warning"
+        prob_normal = float(probabilities[0])
+        prob_warning = float(probabilities[1])
+        prob_critical = float(probabilities[2])
+
+        # Combined risk probability (Class 1 + Class 2)
+        failure_prob = float((prob_warning * 0.5 + prob_critical) * 100.0)
+        failure_prob = min(100.0, max(0.0, failure_prob))
+        health_score = round(max(0.0, 100.0 - failure_prob), 1)
+
+        is_failure = pred_class == 2
+        is_warning = pred_class == 1
+
+        if is_failure:
+            prediction_label = "Machine Failure"
+            risk_level = "High"
+            suggested_status = "Critical"
+        elif is_warning or failure_prob > 25.0:
+            prediction_label = "Degraded / Anomaly Alert"
+            risk_level = "Medium"
+            suggested_status = "Warning"
         else:
-            machine_status = "Healthy"
+            prediction_label = "Normal Operation"
+            risk_level = "Low"
+            suggested_status = "Healthy"
 
-        ticket_required = is_failure
-        if failure_prob >= 95:
-            ticket_priority = "High"
-        elif failure_prob >= 80:
-            ticket_priority = "Medium"
-        else:
-            ticket_priority = "Low"
-
-        rca = self.diagnose_root_causes(
+        # 3. Root Cause Analysis (RCA)
+        rca = self._generate_rca(
+            air_temp=air_temp,
+            process_temp=process_temp,
             rotational_speed=rotational_speed,
             torque=torque,
             tool_wear=tool_wear,
-            temperature_difference=features["temperature_difference"],
-            rpm_torque_interaction=features["rpm_torque_interaction"],
-            load_stress=features["load_stress"]
+            pred_class=pred_class,
+            prob_critical=prob_critical,
+            prob_warning=prob_warning
         )
 
         return {
-            "prediction": prediction_text,
+            "prediction": prediction_label,
+            "predicted_class": pred_class,
+            "class_label": CLASS_LABELS.get(pred_class, "Unknown"),
             "is_failure": is_failure,
-            "failure_probability": failure_prob,
-            "machine_health": normal_prob,
+            "is_warning": is_warning,
+            "failure_probability": round(failure_prob, 2),
+            "machine_health": health_score,
             "risk_level": risk_level,
-            "suggested_machine_status": machine_status,
-            "ticket_required": ticket_required,
-            "ticket_priority": ticket_priority if ticket_required else None,
-            "features": features,
+            "suggested_machine_status": suggested_status,
+            "model_version": self.model_version,
+            "class_probabilities": {
+                "normal": round(prob_normal * 100.0, 2),
+                "warning": round(prob_warning * 100.0, 2),
+                "critical": round(prob_critical * 100.0, 2),
+            },
             "root_cause_analysis": rca
+        }
+
+    def _generate_rca(
+        self,
+        air_temp: float,
+        process_temp: float,
+        rotational_speed: float,
+        torque: float,
+        tool_wear: float,
+        pred_class: int,
+        prob_critical: float,
+        prob_warning: float
+    ) -> Dict[str, Any]:
+        """
+        Physics-based root cause analysis matching 44-feature sensor boundaries.
+        """
+        causes = []
+        components = []
+        maintenance = []
+        analysis_table = []
+
+        temp_diff = process_temp - air_temp
+        power = (2 * np.pi * rotational_speed * torque) / 60.0
+
+        # Parameter 1: Spindle Speed
+        if rotational_speed < 1200 or rotational_speed > 2800:
+            status = "Abnormal"
+            effect = "Spindle instability / excessive rotational drag"
+            causes.append("Rotational speed outside standard envelope (1200-2800 RPM)")
+            components.append("Main Drive Spindle & Inverter Drive")
+            maintenance.append("Inspect VFD drive parameters and spindle bearing lubrication")
+        else:
+            status = "Normal"
+            effect = "Rotational dynamics stable"
+        analysis_table.append({
+            "parameter": "Rotational Speed",
+            "current": f"{rotational_speed:.1f} RPM",
+            "normal": "1200 - 2800 RPM",
+            "status": status,
+            "effect": effect
+        })
+
+        # Parameter 2: Torque
+        if torque > 60.0 or torque < 5.0:
+            status = "Abnormal"
+            effect = "High mechanical strain on cutter head / gear train"
+            causes.append("Extreme torque loading exceeding 60 Nm threshold")
+            components.append("Gearbox / Chuck Assembly / Cutter Head")
+            maintenance.append("Reduce feed rate and verify workpiece clamping tension")
+        else:
+            status = "Normal"
+            effect = "Torque transmission nominal"
+        analysis_table.append({
+            "parameter": "Torque",
+            "current": f"{torque:.1f} Nm",
+            "normal": "10.0 - 60.0 Nm",
+            "status": status,
+            "effect": effect
+        })
+
+        # Parameter 3: Thermal Differential
+        if temp_diff > 12.0 or temp_diff < 5.0:
+            status = "Abnormal"
+            effect = "Poor heat dissipation / localized thermal runaway"
+            causes.append("Thermal differential Delta-T > 12.0 K indicates cooling inefficiency")
+            components.append("Coolant Pump, Heat Exchanger & Thermal Sensors")
+            maintenance.append("Flush coolant lines and top up cutting fluid reservoir")
+        else:
+            status = "Normal"
+            effect = "Thermal equilibrium maintained"
+        analysis_table.append({
+            "parameter": "Thermal Differential (Delta-T)",
+            "current": f"{temp_diff:.1f} K",
+            "normal": "6.0 - 11.5 K",
+            "status": status,
+            "effect": effect
+        })
+
+        # Parameter 4: Tool Wear
+        if tool_wear >= 200.0:
+            status = "Critical"
+            effect = "Flank wear threshold reached; imminent tool breakage"
+            causes.append("Tool wear >= 200 min exceeded tool lifespan")
+            components.append("Carbide Insert / Cutting Tool Assembly")
+            maintenance.append("Schedule immediate tool insert replacement (T-Index #1)")
+        elif tool_wear >= 150.0:
+            status = "Warning"
+            effect = "Approaching end of tool life"
+            maintenance.append("Prepare replacement cutting tool for next changeover")
+        else:
+            status = "Normal"
+            effect = "Cutting edge sharp and intact"
+        analysis_table.append({
+            "parameter": "Tool Wear",
+            "current": f"{tool_wear:.1f} min",
+            "normal": "< 150.0 min",
+            "status": status,
+            "effect": effect
+        })
+
+        if not causes and pred_class == 0:
+            diagnosis = "All physical telemetry parameters are operating well within nominal manufacturing tolerances."
+        elif pred_class == 1:
+            diagnosis = "Warning: Moderate telemetry anomaly detected. Early thermal or mechanical drift observed."
+        else:
+            diagnosis = "Critical Alert: High probability of imminent mechanical failure. Immediate intervention recommended."
+
+        return {
+            "risk_score": round((prob_warning * 0.4 + prob_critical * 0.9) * 100.0, 1),
+            "diagnosis": diagnosis,
+            "causes": causes if causes else ["Telemetry operating in nominal regime"],
+            "components": list(set(components)) if components else ["All assemblies verified nominal"],
+            "maintenance": maintenance if maintenance else ["Maintain standard preventative schedule"],
+            "analysis_table": analysis_table
         }

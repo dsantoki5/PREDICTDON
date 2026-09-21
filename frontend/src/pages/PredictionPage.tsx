@@ -23,13 +23,13 @@ export const PredictionPage: React.FC = () => {
   const [machines, setMachines] = useState<Machine[]>([]);
   const [selectedMachineId, setSelectedMachineId] = useState<number | ''>(preSelectedId || '');
   
-  // Sensor parameters
+  // Sensor parameters - Manual input
   const [inputs, setInputs] = useState({
-    air_temperature: 298.15,
-    process_temperature: 308.65,
-    rotational_speed: 1500,
-    torque: 40.0,
-    tool_wear: 80,
+    air_temperature: '',
+    process_temperature: '',
+    rotational_speed: '',
+    torque: '',
+    tool_wear: '',
   });
 
   const [loading, setLoading] = useState(false);
@@ -45,27 +45,20 @@ export const PredictionPage: React.FC = () => {
     });
   }, []);
 
-  const handlePreset = (type: 'normal' | 'spindle_stress' | 'tool_wear' | 'thermal') => {
-    switch (type) {
-      case 'normal':
-        setInputs({ air_temperature: 298.15, process_temperature: 308.25, rotational_speed: 1500, torque: 38.5, tool_wear: 60 });
-        break;
-      case 'spindle_stress':
-        setInputs({ air_temperature: 299.10, process_temperature: 310.50, rotational_speed: 2450, torque: 65.2, tool_wear: 140 });
-        break;
-      case 'tool_wear':
-        setInputs({ air_temperature: 298.50, process_temperature: 309.10, rotational_speed: 1420, torque: 48.0, tool_wear: 215 });
-        break;
-      case 'thermal':
-        setInputs({ air_temperature: 297.80, process_temperature: 312.40, rotational_speed: 1600, torque: 42.0, tool_wear: 90 });
-        break;
-    }
-  };
-
   const handlePredict = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedMachineId) {
       setError('Please select a CNC machine.');
+      return;
+    }
+    if (
+      inputs.air_temperature === '' ||
+      inputs.process_temperature === '' ||
+      inputs.rotational_speed === '' ||
+      inputs.torque === '' ||
+      inputs.tool_wear === ''
+    ) {
+      setError('Please enter all sensor parameters manually.');
       return;
     }
     setError('');
@@ -93,7 +86,7 @@ export const PredictionPage: React.FC = () => {
       <div>
         <span className="text-xs font-mono uppercase tracking-wider text-cnc-blue">AI Inference Engine</span>
         <h1 className="text-2xl font-display font-bold text-white tracking-tight">Predict Machine Condition</h1>
-        <p className="text-sm text-slate-400 mt-0.5">Enter live sensor readings to evaluate failure probabilities and physics-based root cause diagnostics.</p>
+        <p className="text-sm text-slate-400 mt-0.5">Enter live sensor readings manually to evaluate failure probabilities and physics-based root cause diagnostics.</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -103,44 +96,9 @@ export const PredictionPage: React.FC = () => {
             <div className="flex items-center justify-between border-b border-ink-line pb-3">
               <div className="flex items-center gap-2 font-display font-semibold text-white text-base">
                 <Cpu className="h-4 w-4 text-cnc-blue" />
-                <span>Sensor Telemetry Input</span>
+                <span>Manual Telemetry Input</span>
               </div>
               <span className="text-[10px] font-mono text-slate-500 uppercase">LightGBM v4</span>
-            </div>
-
-            {/* Presets */}
-            <div>
-              <label className="block text-[11px] font-mono uppercase tracking-wider text-slate-400 mb-1.5">Quick Presets</label>
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                <button
-                  type="button"
-                  onClick={() => handlePreset('normal')}
-                  className="px-2.5 py-1.5 rounded border border-ink-line bg-ink-900/60 text-slate-300 hover:border-cnc-emerald/50 hover:text-cnc-emerald transition-colors text-left font-mono"
-                >
-                  🟢 Normal State
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handlePreset('spindle_stress')}
-                  className="px-2.5 py-1.5 rounded border border-ink-line bg-ink-900/60 text-slate-300 hover:border-cnc-rose/50 hover:text-cnc-rose transition-colors text-left font-mono"
-                >
-                  🔴 High RPM Stress
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handlePreset('tool_wear')}
-                  className="px-2.5 py-1.5 rounded border border-ink-line bg-ink-900/60 text-slate-300 hover:border-cnc-amber/50 hover:text-cnc-amber transition-colors text-left font-mono"
-                >
-                  🟠 Tool Wear &gt;180m
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handlePreset('thermal')}
-                  className="px-2.5 py-1.5 rounded border border-ink-line bg-ink-900/60 text-slate-300 hover:border-cnc-sky/50 hover:text-cnc-sky transition-colors text-left font-mono"
-                >
-                  🔵 Thermal Delta
-                </button>
-              </div>
             </div>
 
             <form onSubmit={handlePredict} className="space-y-4 text-xs">
@@ -168,15 +126,16 @@ export const PredictionPage: React.FC = () => {
                     <Thermometer className="h-3.5 w-3.5 text-cnc-sky" />
                     Air Temperature [K]
                   </label>
-                  <span className="font-mono text-slate-500 text-[11px]">{inputs.air_temperature} K</span>
+                  <span className="font-mono text-slate-500 text-[11px]">{inputs.air_temperature ? `${inputs.air_temperature} K` : 'Kelvin [K]'}</span>
                 </div>
                 <input
                   type="number"
                   step="0.01"
                   required
+                  placeholder="e.g. 298.15"
                   value={inputs.air_temperature}
-                  onChange={(e) => setInputs({ ...inputs, air_temperature: parseFloat(e.target.value) || 0 })}
-                  className="w-full rounded border border-ink-line bg-ink-900 p-2 text-white font-mono text-xs focus:border-cnc-blue focus:outline-none"
+                  onChange={(e) => setInputs({ ...inputs, air_temperature: e.target.value })}
+                  className="w-full rounded border border-ink-line bg-ink-900 p-2.5 text-white font-mono text-xs focus:border-cnc-blue focus:outline-none"
                 />
               </div>
 
@@ -187,15 +146,16 @@ export const PredictionPage: React.FC = () => {
                     <Thermometer className="h-3.5 w-3.5 text-cnc-rose" />
                     Process Temperature [K]
                   </label>
-                  <span className="font-mono text-slate-500 text-[11px]">{inputs.process_temperature} K</span>
+                  <span className="font-mono text-slate-500 text-[11px]">{inputs.process_temperature ? `${inputs.process_temperature} K` : 'Kelvin [K]'}</span>
                 </div>
                 <input
                   type="number"
                   step="0.01"
                   required
+                  placeholder="e.g. 308.65"
                   value={inputs.process_temperature}
-                  onChange={(e) => setInputs({ ...inputs, process_temperature: parseFloat(e.target.value) || 0 })}
-                  className="w-full rounded border border-ink-line bg-ink-900 p-2 text-white font-mono text-xs focus:border-cnc-blue focus:outline-none"
+                  onChange={(e) => setInputs({ ...inputs, process_temperature: e.target.value })}
+                  className="w-full rounded border border-ink-line bg-ink-900 p-2.5 text-white font-mono text-xs focus:border-cnc-blue focus:outline-none"
                 />
               </div>
 
@@ -206,15 +166,16 @@ export const PredictionPage: React.FC = () => {
                     <RotateCw className="h-3.5 w-3.5 text-cnc-amber" />
                     Spindle Speed [RPM]
                   </label>
-                  <span className="font-mono text-slate-500 text-[11px]">{inputs.rotational_speed} RPM</span>
+                  <span className="font-mono text-slate-500 text-[11px]">{inputs.rotational_speed ? `${inputs.rotational_speed} RPM` : 'Revolutions/min'}</span>
                 </div>
                 <input
                   type="number"
                   step="1"
                   required
+                  placeholder="e.g. 1500"
                   value={inputs.rotational_speed}
-                  onChange={(e) => setInputs({ ...inputs, rotational_speed: parseFloat(e.target.value) || 0 })}
-                  className="w-full rounded border border-ink-line bg-ink-900 p-2 text-white font-mono text-xs focus:border-cnc-blue focus:outline-none"
+                  onChange={(e) => setInputs({ ...inputs, rotational_speed: e.target.value })}
+                  className="w-full rounded border border-ink-line bg-ink-900 p-2.5 text-white font-mono text-xs focus:border-cnc-blue focus:outline-none"
                 />
               </div>
 
@@ -225,15 +186,16 @@ export const PredictionPage: React.FC = () => {
                     <Zap className="h-3.5 w-3.5 text-cnc-blue" />
                     Cutting Torque [Nm]
                   </label>
-                  <span className="font-mono text-slate-500 text-[11px]">{inputs.torque} Nm</span>
+                  <span className="font-mono text-slate-500 text-[11px]">{inputs.torque ? `${inputs.torque} Nm` : 'Newton-meters [Nm]'}</span>
                 </div>
                 <input
                   type="number"
                   step="0.1"
                   required
+                  placeholder="e.g. 40.0"
                   value={inputs.torque}
-                  onChange={(e) => setInputs({ ...inputs, torque: parseFloat(e.target.value) || 0 })}
-                  className="w-full rounded border border-ink-line bg-ink-900 p-2 text-white font-mono text-xs focus:border-cnc-blue focus:outline-none"
+                  onChange={(e) => setInputs({ ...inputs, torque: e.target.value })}
+                  className="w-full rounded border border-ink-line bg-ink-900 p-2.5 text-white font-mono text-xs focus:border-cnc-blue focus:outline-none"
                 />
               </div>
 
@@ -244,15 +206,16 @@ export const PredictionPage: React.FC = () => {
                     <Clock className="h-3.5 w-3.5 text-purple-400" />
                     Tool Wear [Minutes]
                   </label>
-                  <span className="font-mono text-slate-500 text-[11px]">{inputs.tool_wear} min</span>
+                  <span className="font-mono text-slate-500 text-[11px]">{inputs.tool_wear ? `${inputs.tool_wear} min` : 'Cumulative min'}</span>
                 </div>
                 <input
                   type="number"
                   step="1"
                   required
+                  placeholder="e.g. 80"
                   value={inputs.tool_wear}
-                  onChange={(e) => setInputs({ ...inputs, tool_wear: parseFloat(e.target.value) || 0 })}
-                  className="w-full rounded border border-ink-line bg-ink-900 p-2 text-white font-mono text-xs focus:border-cnc-blue focus:outline-none"
+                  onChange={(e) => setInputs({ ...inputs, tool_wear: e.target.value })}
+                  className="w-full rounded border border-ink-line bg-ink-900 p-2.5 text-white font-mono text-xs focus:border-cnc-blue focus:outline-none"
                 />
               </div>
 
@@ -326,29 +289,79 @@ export const PredictionPage: React.FC = () => {
                 </div>
               </div>
 
+              {/* Model Version Tag */}
+              <div className="flex items-center justify-between px-1 text-xs font-mono text-slate-400">
+                <span>Model: <strong className="text-blue-400">{result.model_version || 'LightGBM_No_SMOTE_Final v4.2'}</strong> (44 Features)</span>
+                <span className="text-emerald-400 font-semibold">Multi-Class Ingestion Active</span>
+              </div>
+
+              {/* 3-Class Probability Breakdown */}
+              {result.class_probabilities && (
+                <div className="rounded-xl border border-slate-800 bg-[#0B0F1D] p-4 space-y-3">
+                  <div className="text-[11px] font-mono uppercase text-slate-400 font-semibold flex items-center justify-between">
+                    <span>Multi-Class Probability Distribution</span>
+                    <span className="text-blue-400">Class {result.predicted_class ?? 0} Dominant</span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    {/* Class 0 */}
+                    <div className="p-3 rounded-lg bg-[#070A13] border border-slate-800/80">
+                      <div className="flex items-center justify-between text-xs mb-1">
+                        <span className="text-slate-300 font-medium">Class 0: Nominal</span>
+                        <span className="font-mono text-emerald-400 font-bold">{result.class_probabilities.normal.toFixed(1)}%</span>
+                      </div>
+                      <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                        <div className="bg-emerald-500 h-full rounded-full transition-all duration-500" style={{ width: `${result.class_probabilities.normal}%` }} />
+                      </div>
+                    </div>
+
+                    {/* Class 1 */}
+                    <div className="p-3 rounded-lg bg-[#070A13] border border-slate-800/80">
+                      <div className="flex items-center justify-between text-xs mb-1">
+                        <span className="text-slate-300 font-medium">Class 1: Anomaly</span>
+                        <span className="font-mono text-amber-400 font-bold">{result.class_probabilities.warning.toFixed(1)}%</span>
+                      </div>
+                      <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                        <div className="bg-amber-500 h-full rounded-full transition-all duration-500" style={{ width: `${result.class_probabilities.warning}%` }} />
+                      </div>
+                    </div>
+
+                    {/* Class 2 */}
+                    <div className="p-3 rounded-lg bg-[#070A13] border border-slate-800/80">
+                      <div className="flex items-center justify-between text-xs mb-1">
+                        <span className="text-slate-300 font-medium">Class 2: Failure</span>
+                        <span className="font-mono text-rose-400 font-bold">{result.class_probabilities.critical.toFixed(1)}%</span>
+                      </div>
+                      <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                        <div className="bg-rose-500 h-full rounded-full transition-all duration-500" style={{ width: `${result.class_probabilities.critical}%` }} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Gauges Breakdown */}
               <div className="grid grid-cols-2 gap-4">
-                <div className="rounded-xl border border-ink-line bg-ink-800/90 p-4">
+                <div className="rounded-xl border border-slate-800 bg-[#0B0F1D] p-4">
                   <div className="text-[11px] font-mono uppercase text-slate-400">Machine Health Score</div>
-                  <div className="text-2xl font-display font-bold text-cnc-emerald mt-1">
+                  <div className="text-2xl font-display font-bold text-emerald-400 mt-1">
                     {result.machine_health.toFixed(1)}%
                   </div>
-                  <div className="w-full bg-ink-900 rounded-full h-2 mt-2 overflow-hidden border border-ink-line">
+                  <div className="w-full bg-slate-900 rounded-full h-2 mt-2 overflow-hidden border border-slate-800">
                     <div
-                      className="bg-cnc-emerald h-full transition-all duration-500"
+                      className="bg-emerald-500 h-full transition-all duration-500"
                       style={{ width: `${result.machine_health}%` }}
                     />
                   </div>
                 </div>
 
-                <div className="rounded-xl border border-ink-line bg-ink-800/90 p-4">
-                  <div className="text-[11px] font-mono uppercase text-slate-400">Failure Probability</div>
-                  <div className="text-2xl font-display font-bold text-cnc-rose mt-1">
+                <div className="rounded-xl border border-slate-800 bg-[#0B0F1D] p-4">
+                  <div className="text-[11px] font-mono uppercase text-slate-400">Failure Risk Probability</div>
+                  <div className="text-2xl font-display font-bold text-rose-400 mt-1">
                     {result.failure_probability.toFixed(1)}%
                   </div>
-                  <div className="w-full bg-ink-900 rounded-full h-2 mt-2 overflow-hidden border border-ink-line">
+                  <div className="w-full bg-slate-900 rounded-full h-2 mt-2 overflow-hidden border border-slate-800">
                     <div
-                      className="bg-cnc-rose h-full transition-all duration-500"
+                      className="bg-rose-500 h-full transition-all duration-500"
                       style={{ width: `${result.failure_probability}%` }}
                     />
                   </div>

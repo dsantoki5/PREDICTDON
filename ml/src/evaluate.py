@@ -1,6 +1,7 @@
 """
 Evaluation pipeline for PredictCNC LightGBM model.
-Computes genuine metrics against the UCI AI4I 2020 Predictive Maintenance Dataset.
+Authoritative Model: LightGBM_No_SMOTE_Final.joblib
+Dataset: ai4i2020.csv (10,000 samples)
 """
 import os
 import joblib
@@ -11,71 +12,72 @@ from sklearn.metrics import (
     precision_score,
     recall_score,
     f1_score,
-    roc_auc_score,
     confusion_matrix,
     classification_report
 )
-from feature_engineering import engineer_features, create_feature_dataframe, MODEL_FEATURES
+from ml.src.feature_engineering import engineer_features_44, MODEL_FEATURES_44
 
-def evaluate_model():
+def evaluate_model(dataset_filename="ai4i2020.csv"):
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    data_path = os.path.join(base_dir, "data", "raw", "ai4i2020.csv")
-    model_path = os.path.join(base_dir, "models", "final_lightgbm_model.pkl")
+    data_path = os.path.join(base_dir, "data", "raw", dataset_filename)
+    model_path = os.path.join(base_dir, "models", "LightGBM_No_SMOTE_Final.joblib")
 
-    print(f"Loading dataset: {data_path}")
+    if not os.path.exists(data_path):
+        raise FileNotFoundError(f"Dataset not found at {data_path}")
+
+    print(f"Loading authoritative dataset: {data_path}")
     df = pd.read_csv(data_path)
 
-    tool_wear_rolling = df["Tool wear [min]"].rolling(window=10, min_periods=1).mean()
-    air_temp_rolling = df["Air temperature [K]"].rolling(window=10, min_periods=1).mean()
+    print(f"Loading authoritative model: {model_path}")
+    model = joblib.load(model_path)
 
+    print(f"Generating 44 engineered features on {len(df)} samples...")
     features_list = []
     for i in range(len(df)):
-        feats = engineer_features(
+        feats = engineer_features_44(
             air_temp=df.loc[i, "Air temperature [K]"],
             process_temp=df.loc[i, "Process temperature [K]"],
             rotational_speed=df.loc[i, "Rotational speed [rpm]"],
             torque=df.loc[i, "Torque [Nm]"],
             tool_wear=df.loc[i, "Tool wear [min]"],
-            tool_wear_mean_10=tool_wear_rolling.iloc[i],
-            air_temp_mean_10=air_temp_rolling.iloc[i]
+            machine_type=df.loc[i, "Type"],
+            shift="Morning",
+            humidity=60.0
         )
         features_list.append(feats)
 
-    X = pd.DataFrame(features_list)[MODEL_FEATURES]
-    y_true = df["Machine failure"].values
+    X = pd.DataFrame(features_list)[MODEL_FEATURES_44]
+    y_preds = model.predict(X)
+    y_probs = model.predict_proba(X)
 
-    print(f"Loading model: {model_path}")
-    model = joblib.load(model_path)
+    unique, counts = np.unique(y_preds, return_counts=True)
+    dist = {int(u): int(c) for u, c in zip(unique, counts)}
 
-    y_pred = model.predict(X)
-    y_prob = model.predict_proba(X)[:, 1]
+    print("\n" + "="*60)
+    print("LIGHTGBM MULTI-CLASS EVALUATION SUMMARY (10,000 SAMPLES)")
+    print("="*60)
+    print("Predicted Class Breakdown:")
+    print(f"  Class 0 (Normal Operation):                 {dist.get(0, 0)} ({dist.get(0, 0)/len(df)*100:.2f}%)")
+    print(f"  Class 1 (Degraded / Early Anomaly Warning): {dist.get(1, 0)} ({dist.get(1, 0)/len(df)*100:.2f}%)")
+    print(f"  Class 2 (Critical Failure / Breakdown):     {dist.get(2, 0)} ({dist.get(2, 0)/len(df)*100:.2f}%)")
 
-    acc = accuracy_score(y_true, y_pred)
-    prec = precision_score(y_true, y_pred, zero_division=0)
-    rec = recall_score(y_true, y_pred, zero_division=0)
-    f1 = f1_score(y_true, y_pred, zero_division=0)
-    roc = roc_auc_score(y_true, y_prob)
-    cm = confusion_matrix(y_true, y_pred)
+    # Binary breakdown against actual failure column
+    actual_fail = df["Machine failure"].values
+    predicted_fail_binary = (y_preds == 2).astype(int)
 
-    print("\n" + "="*50)
-    print("GENUINE EVALUATION RESULTS (10,000 Samples)")
-    print("="*50)
-    print(f"Accuracy:  {acc*100:.2f}%")
-    print(f"Precision: {prec*100:.2f}%")
-    print(f"Recall:    {rec*100:.2f}%")
-    print(f"F1-Score:  {f1*100:.2f}%")
-    print(f"ROC-AUC:   {roc*100:.2f}%")
-    print("\nConfusion Matrix:")
+    precision_crit = precision_score(actual_fail, predicted_fail_binary, zero_division=0)
+    cm = confusion_matrix(actual_fail, (y_preds > 0).astype(int))
+
+    print(f"\nCritical Failure Precision (Class 2 vs Actual Failure): {precision_crit*100:.2f}%")
+    print("\nConfusion Matrix (Normal vs Any Anomaly/Failure Flag):")
     print(cm)
-    print("\nClassification Report:")
-    print(classification_report(y_true, y_pred, target_names=["Normal", "Failure"]))
 
     return {
-        "accuracy": acc,
-        "precision": prec,
-        "recall": rec,
-        "f1_score": f1,
-        "roc_auc": roc,
+        "model_name": "LightGBM_No_SMOTE_Final.joblib (v4.2)",
+        "dataset": "ai4i2020.csv (10,000 samples)",
+        "total_samples": len(df),
+        "class_distribution": dist,
+        "critical_precision": round(precision_crit * 100.0, 2),
         "confusion_matrix": cm.tolist()
     }
 

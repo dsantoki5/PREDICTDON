@@ -1,4 +1,4 @@
-﻿# Byte-compiled / optimized / DLL files
+# Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 *.class
@@ -35,13 +35,11 @@ dist-ssr/
 
 # ML Checkpoints
 *.ipynb_checkpoints
-ml/data/processed/*
-!ml/data/processed/.gitkeep
 
-# Databases
-*.sqlite
-*.sqlite3
-*.db
+# Databases (allow sharing predictcnc.db with team)
+# *.sqlite
+# *.sqlite3
+# *.db
 
 # OS
 Thumbs.db

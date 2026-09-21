@@ -167,11 +167,10 @@ export const DashboardPage: React.FC = () => {
                       <td className="py-2.5 font-mono font-medium text-white">{p.machine_code || `ID #${p.machine_id}`}</td>
                       <td className="py-2.5">
                         <span
-                          className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium ${
-                            p.prediction === 'Machine Failure'
-                              ? 'bg-cnc-rose/15 text-cnc-rose border border-cnc-rose/30'
-                              : 'bg-cnc-emerald/15 text-cnc-emerald border border-cnc-emerald/30'
-                          }`}
+                          className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium ${p.prediction === 'Machine Failure'
+                            ? 'bg-cnc-rose/15 text-cnc-rose border border-cnc-rose/30'
+                            : 'bg-cnc-emerald/15 text-cnc-emerald border border-cnc-emerald/30'
+                            }`}
                         >
                           {p.prediction}
                         </span>

@@ -9,11 +9,15 @@ import {
   FileBarChart,
   ShieldCheck,
   Radio,
+  LogOut,
 } from 'lucide-react';
 import { checkSystemHealth } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import type { SystemHealth } from '../types';
+import logoImage from '../assets/logo.png';
 
 export const AppLayout: React.FC = () => {
+  const { user, logout } = useAuth();
   const [health, setHealth] = useState<SystemHealth | null>(null);
 
   useEffect(() => {
@@ -43,15 +47,15 @@ export const AppLayout: React.FC = () => {
       {/* Sidebar */}
       <aside className="w-64 flex-shrink-0 border-r border-ink-line bg-ink-900/80 flex flex-col backdrop-blur">
         {/* Brand */}
-        <div className="h-16 px-6 border-b border-ink-line flex items-center gap-3">
-          <div className="h-9 w-9 rounded-lg bg-cnc-blue/20 border border-cnc-blue/40 flex items-center justify-center font-display font-bold text-cnc-blue text-sm">
-            CNC
+        <div className="h-16 px-4 border-b border-ink-line flex items-center gap-2.5">
+          <div className="h-10 w-10 flex items-center justify-center shrink-0">
+            <img src={logoImage} alt="PredictCNC" className="h-9 w-9 object-contain drop-shadow-[0_0_8px_rgba(56,189,248,0.3)]" />
           </div>
-          <div>
-            <div className="font-display font-bold tracking-tight text-white leading-tight">
-              PredictCNC
+          <div className="overflow-hidden">
+            <div className="font-display font-bold tracking-tight text-white leading-tight flex items-center gap-1 text-sm truncate">
+              Predict<span className="text-cnc-blue">CNC</span>
             </div>
-            <div className="text-[11px] font-mono text-slate-400">
+            <div className="text-[10px] font-mono text-slate-400 truncate">
               AI Maintenance v2.0
             </div>
           </div>
@@ -68,10 +72,9 @@ export const AppLayout: React.FC = () => {
               to={item.to}
               end={item.to === '/'}
               className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${
-                  isActive
-                    ? 'bg-cnc-blue text-white shadow-lg shadow-cnc-blue/20'
-                    : 'text-slate-400 hover:text-slate-100 hover:bg-ink-800'
+                `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${isActive
+                  ? 'bg-cnc-blue text-white shadow-lg shadow-cnc-blue/20'
+                  : 'text-slate-400 hover:text-slate-100 hover:bg-ink-800'
                 }`
               }
             >
@@ -107,14 +110,30 @@ export const AppLayout: React.FC = () => {
             <span>LIVE INDUSTRIAL TELEMETRY</span>
           </div>
 
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 px-3 py-1 rounded-full border border-ink-line bg-ink-800 text-xs font-mono text-slate-300">
-              <ShieldCheck className="h-3.5 w-3.5 text-cnc-blue" />
-              <span>Security Verified</span>
+          <div className="flex items-center gap-3">
+            <div className="hidden sm:flex items-center gap-2 px-3 py-1 rounded-full border border-ink-line bg-ink-800/80 text-xs font-mono text-slate-300">
+              <ShieldCheck className="h-3.5 w-3.5 text-cnc-emerald" />
+              <span>{user?.role || 'Authenticated'}</span>
             </div>
-            <div className="h-8 w-8 rounded-full bg-cnc-blue/20 border border-cnc-blue/50 flex items-center justify-center font-display font-bold text-xs text-cnc-blue">
-              OP
+
+            <div className="flex items-center gap-2.5 pl-2 border-l border-ink-line">
+              <div className="h-8 w-8 rounded-full bg-cnc-blue/20 border border-cnc-blue/50 flex items-center justify-center font-display font-bold text-xs text-cnc-blue uppercase">
+                {user?.username ? user.username.substring(0, 2) : 'OP'}
+              </div>
+              <div className="hidden md:block text-left">
+                <div className="text-xs font-semibold text-white leading-none">{user?.admin_name || user?.username || 'Operator'}</div>
+                <div className="text-[10px] font-mono text-slate-400 leading-none mt-1">{user?.company_name || 'PredictCNC'}</div>
+              </div>
             </div>
+
+            <button
+              type="button"
+              onClick={logout}
+              title="Sign Out"
+              className="p-2 rounded-lg border border-ink-line bg-ink-800 text-slate-400 hover:text-cnc-rose hover:border-cnc-rose/40 hover:bg-cnc-rose/10 transition-colors ml-1"
+            >
+              <LogOut className="h-4 w-4" />
+            </button>
           </div>
         </header>
 

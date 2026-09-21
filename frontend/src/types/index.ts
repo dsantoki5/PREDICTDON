@@ -48,19 +48,29 @@ export interface AnalysisTableRow {
   effect: string;
 }
 
+export interface ClassProbabilities {
+  normal: number;
+  warning: number;
+  critical: number;
+}
+
 export interface PredictionResult {
   id: number;
   machine_id: number;
   machine_code: string;
   machine_name: string;
   prediction: string;
+  predicted_class?: number;
   is_failure: boolean;
+  is_warning?: boolean;
   failure_probability: number;
   machine_health: number;
   risk_level: 'Low' | 'Medium' | 'High';
   suggested_machine_status: MachineStatus;
   ticket_created: boolean;
   ticket_priority?: TicketPriority;
+  model_version?: string;
+  class_probabilities?: ClassProbabilities;
   root_cause_analysis: {
     risk_score: number;
     diagnosis: string;
@@ -147,3 +157,35 @@ export interface SystemHealth {
   database: string;
   ml_engine: string;
 }
+
+export interface User {
+  id: number;
+  company_name: string;
+  admin_name: string;
+  email: string;
+  username: string;
+  role: string;
+  created_at?: string;
+}
+
+export interface LoginCredentials {
+  company_name?: string;
+  username: string;
+  password: string;
+}
+
+export interface RegisterCredentials {
+  company_name: string;
+  admin_name: string;
+  email: string;
+  username: string;
+  password: string;
+  role?: string;
+}
+
+export interface AuthResponse {
+  access_token: string;
+  token_type: string;
+  user: User;
+}
+

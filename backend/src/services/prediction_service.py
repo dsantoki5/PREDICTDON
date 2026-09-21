@@ -7,25 +7,7 @@ from src.models.machine import Machine
 from src.models.prediction import Prediction
 from src.models.maintenance import MaintenanceTicket
 from src.schemas.prediction import PredictionInput, PredictionRunResponse, PredictionHistoryOut
-
-# Import ML engine from ml/src
-ml_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "ml", "src"))
-if ml_dir not in sys.path:
-    sys.path.insert(0, ml_dir)
-
-from inference import PredictCNCEngine
-
-# Initialize ML engine singleton
-_engine: Optional[PredictCNCEngine] = None
-
-def get_engine() -> PredictCNCEngine:
-    global _engine
-    if _engine is None:
-        model_path = os.path.abspath(
-            os.path.join(os.path.dirname(__file__), "..", "..", "..", "ml", "models", "final_lightgbm_model.pkl")
-        )
-        _engine = PredictCNCEngine(model_path=model_path)
-    return _engine
+from src.services.ml_service import MLService
 
 class PredictionService:
     @staticmethod
@@ -34,33 +16,67 @@ class PredictionService:
         if not machine:
             raise ValueError(f"Machine with ID {payload.machine_id} not found.")
 
-        # Compute rolling window features from last 10 historical predictions for this machine
-        last_10 = (
-            db.query(Prediction.tool_wear, Prediction.air_temperature)
+        # Compute rolling window statistics from recent historical predictions for this machine
+        recent_records = (
+            db.query(
+                Prediction.tool_wear,
+                Prediction.air_temperature,
+                Prediction.process_temperature,
+                Prediction.rotational_speed,
+                Prediction.torque
+            )
             .filter(Prediction.machine_id == payload.machine_id)
             .order_by(Prediction.predicted_at.desc())
             .limit(10)
             .all()
         )
 
-        tool_avg = sum(r[0] for r in last_10) / len(last_10) if last_10 else payload.tool_wear
-        air_avg = sum(r[1] for r in last_10) / len(last_10) if last_10 else payload.air_temperature
+        rolling_history = {}
+        if recent_records:
+            air_temps = [r[1] for r in recent_records]
+            proc_temps = [r[2] for r in recent_records]
+            rpms = [r[3] for r in recent_records]
+            torques = [r[4] for r in recent_records]
 
-        # Evaluate ML engine
-        engine = get_engine()
-        result = engine.predict(
+            rolling_history = {
+                'air_temp_mean': sum(air_temps) / len(air_temps),
+                'proc_temp_mean': sum(proc_temps) / len(proc_temps),
+                'rpm_mean': sum(rpms) / len(rpms),
+                'torque_mean': sum(torques) / len(torques),
+                'air_temp_min': min(air_temps),
+                'air_temp_max': max(air_temps),
+                'proc_temp_min': min(proc_temps),
+                'proc_temp_max': max(proc_temps),
+                'rpm_min': min(rpms),
+                'rpm_max': max(rpms),
+                'torque_min': min(torques),
+                'torque_max': max(torques),
+            }
+
+        # Run multi-class inference using authoritative LightGBM_No_SMOTE_Final.joblib
+        result = MLService.run_prediction(
             air_temp=payload.air_temperature,
             process_temp=payload.process_temperature,
             rotational_speed=payload.rotational_speed,
             torque=payload.torque,
             tool_wear=payload.tool_wear,
-            tool_wear_mean_10=tool_avg,
-            air_temp_mean_10=air_avg
+            machine_type="L",
+            shift="Morning",
+            humidity=60.0,
+            rolling_history=rolling_history
         )
 
-        # Persist prediction
-        confidence_val = result["failure_probability"] if result["is_failure"] else result["machine_health"]
+        # Determine confidence value
+        pred_class = result["predicted_class"]
+        class_probs = result.get("class_probabilities", {})
+        if pred_class == 0:
+            confidence_val = class_probs.get("normal", result["machine_health"])
+        elif pred_class == 1:
+            confidence_val = class_probs.get("warning", result["failure_probability"])
+        else:
+            confidence_val = class_probs.get("critical", result["failure_probability"])
 
+        # Persist prediction in DB
         prediction_rec = Prediction(
             machine_id=payload.machine_id,
             air_temperature=payload.air_temperature,
@@ -68,17 +84,19 @@ class PredictionService:
             rotational_speed=payload.rotational_speed,
             torque=payload.torque,
             tool_wear=payload.tool_wear,
-            load_density=result["features"]["load_density"],
-            rpm_torque_interaction=result["features"]["rpm_torque_interaction"],
-            temperature_difference=result["features"]["temperature_difference"],
-            temperature_ratio=result["features"]["temperature_ratio"],
-            load_stress=result["features"]["load_stress"],
-            tool_wear_mean_10=tool_avg,
-            air_temp_mean_10=air_avg,
+            load_density=payload.torque / 100.0,
+            rpm_torque_interaction=payload.rotational_speed * payload.torque,
+            temperature_difference=payload.process_temperature - payload.air_temperature,
+            temperature_ratio=payload.process_temperature / payload.air_temperature if payload.air_temperature != 0 else 1.0,
+            load_stress=payload.torque * (payload.torque / 100.0),
             prediction=result["prediction"],
+            predicted_class=pred_class,
+            model_version=result.get("model_version", "LightGBM_No_SMOTE_Final v4.2"),
             probability=result["failure_probability"],
-            healthy_probability=result["machine_health"],
-            confidence=confidence_val
+            healthy_probability=class_probs.get("normal", result["machine_health"]),
+            warning_probability=class_probs.get("warning", 0.0),
+            critical_probability=class_probs.get("critical", 0.0),
+            confidence=round(confidence_val, 2)
         )
         db.add(prediction_rec)
         db.flush()
@@ -86,17 +104,28 @@ class PredictionService:
         # Update machine status
         machine.status = result["suggested_machine_status"]
 
-        # Automatically create maintenance ticket if failure predicted
+        # Automatically generate maintenance ticket if failure or warning predicted
         ticket_created = False
         ticket_priority = None
         if result["is_failure"]:
-            ticket_priority = result["ticket_priority"]
+            ticket_priority = "High"
             ticket = MaintenanceTicket(
                 machine_id=payload.machine_id,
                 prediction_id=prediction_rec.id,
-                priority=ticket_priority,
+                priority="High",
                 status="Pending",
-                remarks=f"Auto-generated ticket: {result['root_cause_analysis']['diagnosis']} risk detected ({result['failure_probability']}% failure probability)."
+                remarks=f"High Priority AI Alert: {result['root_cause_analysis']['diagnosis']} ({result['failure_probability']}% failure probability)."
+            )
+            db.add(ticket)
+            ticket_created = True
+        elif result["is_warning"] or result["failure_probability"] > 35.0:
+            ticket_priority = "Medium"
+            ticket = MaintenanceTicket(
+                machine_id=payload.machine_id,
+                prediction_id=prediction_rec.id,
+                priority="Medium",
+                status="Pending",
+                remarks=f"Preventive Inspection Ticket: Anomaly detected ({result['failure_probability']}% risk probability)."
             )
             db.add(ticket)
             ticket_created = True
@@ -110,13 +139,17 @@ class PredictionService:
             machine_code=machine.machine_code,
             machine_name=machine.machine_name,
             prediction=result["prediction"],
+            predicted_class=result["predicted_class"],
             is_failure=result["is_failure"],
+            is_warning=result["is_warning"],
             failure_probability=result["failure_probability"],
             machine_health=result["machine_health"],
             risk_level=result["risk_level"],
             suggested_machine_status=result["suggested_machine_status"],
             ticket_created=ticket_created,
             ticket_priority=ticket_priority,
+            model_version=result["model_version"],
+            class_probabilities=result["class_probabilities"],
             root_cause_analysis=result["root_cause_analysis"],
             predicted_at=prediction_rec.predicted_at
         )

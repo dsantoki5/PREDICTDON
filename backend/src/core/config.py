@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "predictcnc-development-insecure-secret-key-change-in-prod"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24
-    DATABASE_URL: str = "postgresql+psycopg2://postgres:Divya%402005@localhost:5432/predictcnc"
+    DATABASE_URL: str = "sqlite:///./predictcnc.db"
     CORS_ORIGINS: Union[List[str], str] = ["http://localhost:5173", "http://localhost:3000", "http://127.0.0.1:5173"]
 
     @field_validator("CORS_ORIGINS", mode="before")

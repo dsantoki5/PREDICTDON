@@ -27,5 +27,6 @@ class Prediction(Base):
     confidence = Column(Numeric(5, 2), nullable=True)
     process_temp_mean_10 = Column(Float, nullable=True)
     rpm_std_10 = Column(Float, nullable=True)
-    torque_std_10 = Column(Float, nullable=True)
+    predicted_class = Column(Integer, nullable=True, default=0)
+    model_version = Column(String(100), nullable=True, default="LightGBM_No_SMOTE_Final v4.2")
     predicted_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), index=True)

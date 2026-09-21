@@ -18,12 +18,17 @@ class AnalysisRow(BaseModel):
     effect: str
 
 class RootCauseAnalysis(BaseModel):
-    risk_score: int
+    risk_score: float
     diagnosis: str
     causes: List[str]
     components: List[str]
     maintenance: List[str]
     analysis_table: List[Dict[str, Any]]
+
+class ClassProbabilities(BaseModel):
+    normal: float
+    warning: float
+    critical: float
 
 class PredictionRunResponse(BaseModel):
     id: int
@@ -31,13 +36,17 @@ class PredictionRunResponse(BaseModel):
     machine_code: str
     machine_name: str
     prediction: str
+    predicted_class: Optional[int] = 0
     is_failure: bool
+    is_warning: Optional[bool] = False
     failure_probability: float
     machine_health: float
     risk_level: str
     suggested_machine_status: str
     ticket_created: bool
     ticket_priority: Optional[str] = None
+    model_version: Optional[str] = "LightGBM_No_SMOTE_Final v4.2"
+    class_probabilities: Optional[ClassProbabilities] = None
     root_cause_analysis: RootCauseAnalysis
     predicted_at: datetime
 

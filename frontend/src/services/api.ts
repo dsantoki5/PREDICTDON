@@ -10,6 +10,10 @@ import type {
   DashboardSummary,
   ReportsSummary,
   SystemHealth,
+  User,
+  LoginCredentials,
+  RegisterCredentials,
+  AuthResponse,
 } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
@@ -21,6 +25,32 @@ export const apiClient = axios.create({
   },
   timeout: 15000,
 });
+
+// Request interceptor: attach token
+apiClient.interceptors.request.use((config) => {
+  const token = localStorage.getItem('predictcnc_token');
+  if (token && config.headers) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+// Auth
+export const loginUser = async (credentials: LoginCredentials): Promise<AuthResponse> => {
+  const res = await apiClient.post<AuthResponse>('/auth/login', credentials);
+  return res.data;
+};
+
+export const registerUser = async (credentials: RegisterCredentials): Promise<AuthResponse> => {
+  const res = await apiClient.post<AuthResponse>('/auth/register', credentials);
+  return res.data;
+};
+
+export const getMe = async (): Promise<User> => {
+  const res = await apiClient.get<User>('/auth/me');
+  return res.data;
+};
+
 
 // System Health
 export const checkSystemHealth = async (): Promise<SystemHealth> => {
