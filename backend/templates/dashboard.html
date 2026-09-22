@@ -1,0 +1,295 @@
+{% extends "base.html" %}
+
+{% block title %}System Dashboard — PredictCNC AI Telemetry{% endblock %}
+
+{% block content %}
+<!-- Encompassing Glassmorphic Main Dashboard Card (Professional Industrial Design) -->
+<div class="dashboard-main-card">
+
+  <!-- Header Row: Title & Actions -->
+  <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 pb-4 mb-4 border-bottom border-secondary border-opacity-25">
+    <div>
+      <div class="d-flex align-items-center gap-2 mb-1">
+        <span class="badge px-2 py-1 rounded-pill" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4); font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.1em; font-weight: 700;">FLEET OVERVIEW</span>
+      </div>
+      <h2 class="font-display fw-bold text-white mb-1 tracking-tight" style="font-size: 1.95rem;">System Dashboard</h2>
+      <p class="text-secondary mb-0 font-sans" style="font-size: 0.88rem;">Real-time telemetry, fleet health monitoring, and AI predictive maintenance.</p>
+    </div>
+    <div class="dashboard-header-actions">
+      <button onclick="window.location.reload()" class="btn btn-cnc-outline rounded-3 p-2.5 d-flex align-items-center justify-content-center" style="width: 42px; height: 42px; border-color: rgba(51, 65, 85, 0.9);" title="Refresh Statistics">
+        <i class="fa-solid fa-rotate-right text-light" style="font-size: 0.95rem;"></i>
+      </button>
+      <a href="{{ url_for('predict_page') }}" class="btn-run-prediction">
+        <i class="fa-solid fa-bolt" style="color: #fde047; font-size: 0.95rem;"></i>
+        <span>Run New Prediction</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- Row 1: 4 Top KPI Stat Cards -->
+  <div class="row g-3 mb-4">
+    <!-- 1. Total Fleet -->
+    <div class="col-12 col-sm-6 col-xl-3">
+      <div class="stat-card-kpi tone-primary">
+        <div class="kpi-main-group">
+          <div class="kpi-icon-box kpi-icon-blue">
+            <i class="fa-solid fa-database"></i>
+          </div>
+          <div>
+            <div class="kpi-label-title">TOTAL FLEET</div>
+            <div class="kpi-value text-white">{{ metrics.total_machines }}</div>
+            <div class="kpi-label-sub">CNC UNITS ACTIVE</div>
+          </div>
+        </div>
+        <div class="align-self-start pt-1">
+          <i class="fa-solid fa-gear" style="color: #64748b; font-size: 0.95rem;"></i>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. Healthy Units -->
+    <div class="col-12 col-sm-6 col-xl-3">
+      <div class="stat-card-kpi tone-success">
+        <div class="kpi-main-group">
+          <div class="kpi-icon-box kpi-icon-green">
+            <i class="fa-solid fa-heart"></i>
+          </div>
+          <div>
+            <div class="kpi-label-title">HEALTHY UNITS</div>
+            <div class="kpi-value" style="color: #34d399;">{{ metrics.healthy_machines }}</div>
+            <div class="kpi-label-sub">NOMINAL STATE</div>
+          </div>
+        </div>
+        <div class="align-self-start pt-1">
+          <i class="fa-solid fa-shield" style="color: #64748b; font-size: 0.95rem;"></i>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. Warning State -->
+    <div class="col-12 col-sm-6 col-xl-3">
+      <div class="stat-card-kpi tone-warning">
+        <div class="kpi-main-group">
+          <div class="kpi-icon-box kpi-icon-amber">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+          </div>
+          <div>
+            <div class="kpi-label-title">WARNING STATE</div>
+            <div class="kpi-value" style="color: #fbbf24;">{{ metrics.warning_machines }}</div>
+            <div class="kpi-label-sub">INSPECTION ADVISED</div>
+          </div>
+        </div>
+        <div class="align-self-start pt-1">
+          <i class="fa-solid fa-triangle-exclamation" style="color: #64748b; font-size: 0.95rem;"></i>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. Critical Risk -->
+    <div class="col-12 col-sm-6 col-xl-3">
+      <div class="stat-card-kpi tone-danger">
+        <div class="kpi-main-group">
+          <div class="kpi-icon-box kpi-icon-rose">
+            <i class="fa-solid fa-circle-exclamation"></i>
+          </div>
+          <div>
+            <div class="kpi-label-title">CRITICAL RISK</div>
+            <div class="kpi-value" style="color: #f87171;">{{ metrics.critical_machines }}</div>
+            <div class="kpi-label-sub">IMMEDIATE ACTION</div>
+          </div>
+        </div>
+        <div class="align-self-start pt-1">
+          <i class="fa-solid fa-circle-exclamation" style="color: #64748b; font-size: 0.95rem;"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Row 2: 3 Secondary Metric Cards -->
+  <div class="row g-3 mb-4">
+    <!-- Total Predictions -->
+    <div class="col-12 col-md-4">
+      <div class="metric-card-secondary">
+        <div class="d-flex align-items-center gap-3">
+          <div class="metric-icon-small" style="background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.4); color: #38bdf8;">
+            <i class="fa-solid fa-chart-line"></i>
+          </div>
+          <div>
+            <div class="font-mono fw-bold" style="font-size: 0.78rem; color: #cbd5e1; text-transform: uppercase; letter-spacing: 0.05em;">Total Predictions</div>
+            <div class="font-display fw-bold text-white fs-3 mt-0.5">{{ metrics.total_predictions }}</div>
+          </div>
+        </div>
+        <i class="fa-solid fa-arrow-trend-up fs-5" style="color: #38bdf8;"></i>
+      </div>
+    </div>
+
+    <!-- Average Fleet Health -->
+    <div class="col-12 col-md-4">
+      <div class="metric-card-secondary">
+        <div class="d-flex align-items-center gap-3 flex-grow-1">
+          <div class="metric-icon-small" style="background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.4); color: #10b981;">
+            <i class="fa-solid fa-heart"></i>
+          </div>
+          <div class="flex-grow-1">
+            <div class="font-mono fw-bold" style="font-size: 0.78rem; color: #cbd5e1; text-transform: uppercase; letter-spacing: 0.05em;">Average Fleet Health</div>
+            <div class="d-flex align-items-center gap-3 mt-1">
+              <span class="font-display fw-bold fs-3" style="color: #10b981; line-height: 1;">{{ metrics.average_fleet_health }}%</span>
+              <div class="progress flex-grow-1" style="height: 8px; background: rgba(30, 41, 59, 0.9); border-radius: 9999px;">
+                <div class="progress-bar" role="progressbar" style="width: {{ metrics.average_fleet_health }}%; background: linear-gradient(90deg, #10b981, #34d399); box-shadow: 0 0 12px #10b981; border-radius: 9999px;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <i class="fa-solid fa-shield-halved fs-5" style="color: #10b981;"></i>
+      </div>
+    </div>
+
+    <!-- Pending Work Tickets -->
+    <div class="col-12 col-md-4">
+      <div class="metric-card-secondary">
+        <div class="d-flex align-items-center gap-3">
+          <div class="metric-icon-small" style="background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.4); color: #f59e0b;">
+            <i class="fa-solid fa-screwdriver-wrench"></i>
+          </div>
+          <div>
+            <div class="font-mono fw-bold" style="font-size: 0.78rem; color: #cbd5e1; text-transform: uppercase; letter-spacing: 0.05em;">Pending Work Tickets</div>
+            <div class="font-display fw-bold fs-3 mt-0.5" style="color: #f59e0b;">{{ metrics.pending_tickets }}</div>
+          </div>
+        </div>
+        <i class="fa-solid fa-screwdriver-wrench fs-5" style="color: #f59e0b;"></i>
+      </div>
+    </div>
+  </div>
+
+  <!-- Row 3: 2 Wide Data Tables in Parallel -->
+  <div class="row g-4 mb-4">
+    <!-- 1. Recent Prediction Runs -->
+    <div class="col-12 col-lg-6">
+      <div class="table-card-container h-100">
+        <div class="table-card-header">
+          <div class="table-header-title-group">
+            <div class="table-header-icon-badge">
+              <i class="fa-solid fa-chart-line"></i>
+            </div>
+            <h6 class="font-display fw-bold text-white mb-0" style="font-size: 0.95rem;">Recent Prediction Runs</h6>
+          </div>
+          <a href="{{ url_for('history_page') }}" class="table-header-link">
+            <span>View Full Log</span>
+            <i class="fa-solid fa-arrow-right" style="font-size: 0.72rem;"></i>
+          </a>
+        </div>
+        <div class="table-responsive">
+          <table class="table-cnc">
+            <thead>
+              <tr>
+                <th>Machine</th>
+                <th>Prediction</th>
+                <th>Probability</th>
+                <th>Timestamp</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for p in recent_history %}
+              <tr>
+                <td class="font-mono fw-bold" style="color: #38bdf8;">{{ p.machine_code or 'ID #' ~ p.machine_id }}</td>
+                <td>
+                  {% if p.is_failure or p.prediction == 'Machine Failure' %}
+                  <span class="badge rounded-pill px-3 py-1" style="background: rgba(239, 68, 68, 0.18); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.45); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.02em;">
+                    &bull; Machine Failure
+                  </span>
+                  {% elif p.is_warning or 'Warning' in p.prediction %}
+                  <span class="badge rounded-pill px-3 py-1" style="background: rgba(245, 158, 11, 0.18); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.45); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.02em;">
+                    &bull; Inspection Advised
+                  </span>
+                  {% else %}
+                  <span class="badge rounded-pill px-3 py-1" style="background: rgba(16, 185, 129, 0.18); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.45); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.02em;">
+                    &bull; Normal Operation
+                  </span>
+                  {% endif %}
+                </td>
+                <td class="font-mono fw-bold text-light" style="font-size: 0.82rem;">{{ "%.1f"|format(p.probability or 0.0) }}%</td>
+                <td class="font-mono text-secondary" style="font-size: 0.78rem;">{{ p.predicted_at }}</td>
+              </tr>
+              {% else %}
+              <tr>
+                <td colspan="4" class="text-center text-secondary font-mono py-4">No recent predictions logged in current fleet.</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. Registered Fleet -->
+    <div class="col-12 col-lg-6">
+      <div class="table-card-container h-100">
+        <div class="table-card-header">
+          <div class="table-header-title-group">
+            <div class="table-header-icon-badge">
+              <i class="fa-solid fa-microchip"></i>
+            </div>
+            <h6 class="font-display fw-bold text-white mb-0" style="font-size: 0.95rem;">Registered Fleet</h6>
+          </div>
+          <a href="{{ url_for('machines_page') }}" class="table-header-link">
+            <span>Manage Fleet</span>
+            <i class="fa-solid fa-arrow-right" style="font-size: 0.72rem;"></i>
+          </a>
+        </div>
+        <div class="table-responsive">
+          <table class="table-cnc">
+            <thead>
+              <tr>
+                <th>Code</th>
+                <th>Machine Name</th>
+                <th>Department</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for m in machines[:5] %}
+              <tr>
+                <td class="font-mono fw-bold" style="color: #38bdf8;">{{ m.machine_code }}</td>
+                <td class="text-white fw-semibold">{{ m.machine_name }}</td>
+                <td class="text-secondary font-mono" style="font-size: 0.82rem;">{{ m.department or 'General' }}</td>
+                <td>
+                  {% if m.status == 'Critical' %}
+                  <span class="badge rounded-pill px-3 py-1" style="background: rgba(239, 68, 68, 0.18); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.45); font-size: 0.75rem; font-weight: 700;">
+                    &bull; Critical
+                  </span>
+                  {% elif m.status == 'Warning' %}
+                  <span class="badge rounded-pill px-3 py-1" style="background: rgba(245, 158, 11, 0.18); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.45); font-size: 0.75rem; font-weight: 700;">
+                    &bull; Warning
+                  </span>
+                  {% else %}
+                  <span class="badge rounded-pill px-3 py-1" style="background: rgba(16, 185, 129, 0.18); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.45); font-size: 0.75rem; font-weight: 700;">
+                    &bull; Healthy
+                  </span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% else %}
+              <tr>
+                <td colspan="4" class="text-center text-secondary font-mono py-4">No CNC machines registered yet.</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Container Footer (Matching Screenshot) -->
+  <div class="d-flex flex-column flex-sm-row align-items-center justify-content-between pt-3.5 border-top border-secondary border-opacity-25 font-mono text-secondary" style="font-size: 0.78rem;">
+    <div class="d-flex align-items-center gap-2 mb-2 mb-sm-0">
+      <span class="status-dot pulse"></span>
+      <span style="color: #cbd5e1;">API Status: <strong style="color: #34d399;">Operational</strong></span>
+    </div>
+    <div>
+      Engine: <span class="fw-bold" style="color: #38bdf8;">LightGBM v4 (AI4I 2020 Model)</span>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

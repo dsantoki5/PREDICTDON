@@ -1,0 +1,359 @@
+{% extends "base.html" %}
+
+{% block title %}Maintenance Work Orders — PredictCNC{% endblock %}
+
+{% block content %}
+<!-- Main Glassmorphic Panel (Matching Login Page & Industrial UI) -->
+<div class="maintenance-main-card">
+
+  <!-- Header Row: Title & Action Button -->
+  <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 pb-4 mb-4 border-bottom border-secondary border-opacity-25">
+    <div>
+      <div class="d-flex align-items-center gap-2 mb-1">
+        <span class="badge px-2.5 py-1 rounded-pill" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4); font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.1em; font-weight: 700;">OPERATIONS</span>
+      </div>
+      <h2 class="font-display fw-bold mb-1 tracking-tight" style="font-size: 1.95rem;">
+        <span style="color: #38bdf8;">Maintenance</span> <span class="text-white">Work Orders</span>
+      </h2>
+      <p class="text-secondary mb-0 font-sans" style="font-size: 0.88rem;">
+        Track, resolve, and audit maintenance tickets raised by the AI prediction engine.
+      </p>
+    </div>
+    <div>
+      <button type="button" class="btn-run-prediction" data-bs-toggle="modal" data-bs-target="#newTicketModal">
+        <i class="fa-solid fa-plus" style="font-size: 0.88rem;"></i>
+        <span>Create Work Order</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Filter Pills Navigation Tabs -->
+  <div class="filter-pills-container mb-4">
+    <button type="button" class="filter-pill-btn active" onclick="filterByStatus('all', this)">
+      <span>All Tickets</span>
+    </button>
+    <button type="button" class="filter-pill-btn" onclick="filterByStatus('Pending', this)">
+      <span>Pending</span>
+    </button>
+    <button type="button" class="filter-pill-btn" onclick="filterByStatus('In Progress', this)">
+      <span>In Progress</span>
+    </button>
+    <button type="button" class="filter-pill-btn" onclick="filterByStatus('Completed', this)">
+      <span>Completed</span>
+    </button>
+  </div>
+
+  <!-- Work Orders Data Table -->
+  <div class="table-responsive" style="border-radius: 12px; border: 1px solid rgba(30, 41, 59, 0.7); background: rgba(11, 17, 32, 0.65);">
+    <table class="table-cnc" id="maintenanceTable">
+      <thead>
+        <tr>
+          <th>TICKET ID</th>
+          <th>MACHINE</th>
+          <th>PRIORITY</th>
+          <th>STATUS</th>
+          <th>DIAGNOSTIC REMARKS</th>
+          <th>CREATED</th>
+          <th class="text-end">ACTIONS</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for t in tickets %}
+        <tr data-status="{{ t.status }}">
+          <!-- Ticket ID -->
+          <td class="font-mono fw-bold" style="color: #38bdf8; font-size: 0.88rem;">
+            #{{ t.id }}
+          </td>
+
+          <!-- Machine -->
+          <td>
+            <span class="font-mono fw-bold text-white" style="font-size: 0.88rem;">{{ t.machine_code }}</span>
+          </td>
+
+          <!-- Priority Badge -->
+          <td>
+            {% if t.priority == 'High' %}
+              <span class="badge-priority-high">HIGH</span>
+            {% elif t.priority == 'Medium' %}
+              <span class="badge-priority-medium">MEDIUM</span>
+            {% else %}
+              <span class="badge-priority-low">LOW</span>
+            {% endif %}
+          </td>
+
+          <!-- Status Badge with Bullet -->
+          <td>
+            {% if t.status == 'Completed' %}
+              <span class="badge-status-pill badge-status-completed">
+                <span class="status-bullet">●</span> Completed
+              </span>
+            {% elif t.status == 'In Progress' %}
+              <span class="badge-status-pill badge-status-progress">
+                <span class="status-bullet">●</span> In Progress
+              </span>
+            {% else %}
+              <span class="badge-status-pill badge-status-pending">
+                <span class="status-bullet">●</span> Pending
+              </span>
+            {% endif %}
+          </td>
+
+          <!-- Diagnostic Remarks -->
+          <td style="max-width: 420px;">
+            <div class="text-truncate font-sans" style="color: #cbd5e1; font-size: 0.84rem;" title="{{ t.remarks }}">
+              {{ t.remarks or 'Automated AI preventative maintenance work order.' }}
+            </div>
+          </td>
+
+          <!-- Created Date -->
+          <td class="font-mono text-secondary" style="font-size: 0.8rem; white-space: nowrap;">
+            {% if t.created_at %}
+              {% if t.created_at.strftime is defined %}
+                {{ t.created_at.strftime('%m/%d/%Y') }}
+              {% else %}
+                {{ (t.created_at|string)[:10] }}
+              {% endif %}
+            {% else %}
+              --
+            {% endif %}
+          </td>
+
+          <!-- Action Buttons -->
+          <td class="text-end" style="white-space: nowrap;">
+            <button class="action-btn-icon me-1.5" title="Edit / Update Status" 
+                    onclick="openEditModal({{ t.id }}, '{{ t.status }}', '{{ t.priority }}', '{{ (t.remarks or '')|replace("'", "\\'")|replace('"', '\\"') }}')">
+              <i class="fa-solid fa-pencil"></i>
+            </button>
+            <button class="action-btn-icon btn-danger-action" title="Delete Work Order" onclick="deleteTicket({{ t.id }})">
+              <i class="fa-solid fa-trash"></i>
+            </button>
+          </td>
+        </tr>
+        {% else %}
+        <tr id="emptyTableRow">
+          <td colspan="7" class="text-center py-5 font-mono text-secondary" style="font-size: 0.88rem;">
+            <i class="fa-solid fa-clipboard-check mb-2 fs-4 d-block text-secondary opacity-50"></i>
+            No maintenance work orders found for your fleet.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Bottom Container Info Footer -->
+  <div class="d-flex flex-column flex-sm-row align-items-center justify-content-between pt-4 mt-4 border-top border-secondary border-opacity-25 font-mono text-secondary" style="font-size: 0.78rem;">
+    <div class="d-flex align-items-center gap-2 mb-2 mb-sm-0">
+      <span class="status-dot pulse"></span>
+      <span style="color: #cbd5e1;">Maintenance Dispatcher: <strong style="color: #34d399;">Active</strong></span>
+    </div>
+    <div>
+      Total Tickets in Scope: <span class="fw-bold" style="color: #38bdf8;">{{ tickets|length }}</span>
+    </div>
+  </div>
+
+</div>
+
+<!-- Create Work Order Modal -->
+<div class="modal fade" id="newTicketModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content modal-content-cnc" style="background: rgba(7, 13, 31, 0.98); border: 1px solid rgba(56, 189, 248, 0.35); border-radius: 20px; box-shadow: 0 0 50px rgba(37, 99, 235, 0.35);">
+      <div class="modal-header modal-header-cnc border-bottom border-secondary border-opacity-25 p-4">
+        <h5 class="modal-title font-display fw-bold text-white mb-0 d-flex align-items-center gap-2">
+          <i class="fa-solid fa-plus" style="color: #38bdf8;"></i>
+          <span>Create Work Order</span>
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form onsubmit="handleCreateTicket(event)">
+        <div class="modal-body p-4">
+          <div class="mb-3.5">
+            <label class="form-label font-mono small text-secondary text-uppercase fw-bold" style="font-size: 0.72rem; letter-spacing: 0.05em;">Target CNC Machine *</label>
+            {% if machines and machines|length > 0 %}
+            <select id="tk_machine_id" class="form-select login-form-input" style="padding-left: 0.9rem !important;" required>
+              {% for m in machines %}
+              <option value="{{ m.id }}">{{ m.machine_code }} — {{ m.machine_name }} ({{ m.department or 'Bay 1' }})</option>
+              {% endfor %}
+            </select>
+            {% else %}
+            <div class="p-2.5 rounded bg-dark border border-warning border-opacity-50 text-warning font-mono" style="font-size: 0.78rem;">
+              No machines registered yet. Please add a machine in Fleet Registry first.
+            </div>
+            <select id="tk_machine_id" class="d-none" required></select>
+            {% endif %}
+          </div>
+
+          <div class="mb-3.5">
+            <label class="form-label font-mono small text-secondary text-uppercase fw-bold" style="font-size: 0.72rem; letter-spacing: 0.05em;">Priority Level *</label>
+            <select id="tk_priority" class="form-select login-form-input" style="padding-left: 0.9rem !important;" required>
+              <option value="Medium">Medium (Preventative Inspection)</option>
+              <option value="High">High (Immediate Shutdown / Critical Repair)</option>
+              <option value="Low">Low (Routine Check / Lubrication)</option>
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label font-mono small text-secondary text-uppercase fw-bold" style="font-size: 0.72rem; letter-spacing: 0.05em;">Diagnostic Remarks / Action Plan *</label>
+            <textarea id="tk_remarks" class="form-control login-form-input" rows="3" style="padding-left: 0.9rem !important;" placeholder="Describe symptoms, planned tool replacement, or telemetry anomaly..." required></textarea>
+          </div>
+        </div>
+        <div class="modal-footer border-top border-secondary border-opacity-25 p-3.5 d-flex justify-content-end gap-2">
+          <button type="button" class="btn btn-cnc-outline" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn-login-submit" style="width: auto; padding: 0.65rem 1.4rem;">
+            <i class="fa-solid fa-check"></i> Issue Work Order
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Edit / Update Ticket Modal -->
+<div class="modal fade" id="editTicketModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content modal-content-cnc" style="background: rgba(7, 13, 31, 0.98); border: 1px solid rgba(56, 189, 248, 0.35); border-radius: 20px; box-shadow: 0 0 50px rgba(37, 99, 235, 0.35);">
+      <div class="modal-header modal-header-cnc border-bottom border-secondary border-opacity-25 p-4">
+        <h5 class="modal-title font-display fw-bold text-white mb-0 d-flex align-items-center gap-2">
+          <i class="fa-solid fa-pencil" style="color: #38bdf8;"></i>
+          <span>Update Work Order #<span id="edit_ticket_display_id"></span></span>
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form onsubmit="handleUpdateTicket(event)">
+        <input type="hidden" id="edit_ticket_id">
+        <div class="modal-body p-4">
+          <div class="mb-3.5">
+            <label class="form-label font-mono small text-secondary text-uppercase fw-bold" style="font-size: 0.72rem; letter-spacing: 0.05em;">Work Status *</label>
+            <select id="edit_tk_status" class="form-select login-form-input" style="padding-left: 0.9rem !important;" required>
+              <option value="Pending">Pending</option>
+              <option value="In Progress">In Progress</option>
+              <option value="Completed">Completed</option>
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label font-mono small text-secondary text-uppercase fw-bold" style="font-size: 0.72rem; letter-spacing: 0.05em;">Resolution Notes / Remarks</label>
+            <textarea id="edit_tk_remarks" class="form-control login-form-input" rows="3" style="padding-left: 0.9rem !important;" placeholder="Add updated diagnostic findings or work order notes..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer border-top border-secondary border-opacity-25 p-3.5 d-flex justify-content-end gap-2">
+          <button type="button" class="btn btn-cnc-outline" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn-login-submit" style="width: auto; padding: 0.65rem 1.4rem;">
+            <i class="fa-solid fa-save"></i> Save Changes
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  function filterByStatus(status, btnElement) {
+    // Update active pill button
+    document.querySelectorAll('.filter-pill-btn').forEach(btn => btn.classList.remove('active'));
+    if (btnElement) {
+      btnElement.classList.add('active');
+    }
+
+    // Filter table rows
+    const rows = document.querySelectorAll('#maintenanceTable tbody tr:not(#emptyTableRow)');
+    let visibleCount = 0;
+    rows.forEach(row => {
+      const rowStatus = row.getAttribute('data-status');
+      if (status === 'all' || rowStatus === status) {
+        row.style.display = '';
+        visibleCount++;
+      } else {
+        row.style.display = 'none';
+      }
+    });
+
+    const emptyRow = document.getElementById('emptyTableRow');
+    if (emptyRow) {
+      emptyRow.style.display = (visibleCount === 0 && rows.length > 0) ? '' : 'none';
+    }
+  }
+
+  function openEditModal(id, status, priority, remarks) {
+    document.getElementById('edit_ticket_id').value = id;
+    document.getElementById('edit_ticket_display_id').innerText = id;
+    document.getElementById('edit_tk_status').value = status;
+    document.getElementById('edit_tk_remarks').value = remarks || '';
+    
+    const editModal = new bootstrap.Modal(document.getElementById('editTicketModal'));
+    editModal.show();
+  }
+
+  async function handleCreateTicket(e) {
+    e.preventDefault();
+    const machineSelect = document.getElementById('tk_machine_id');
+    const machineId = machineSelect ? parseInt(machineSelect.value) : NaN;
+    if (!machineId || isNaN(machineId)) {
+      alert('Please register and select a CNC machine first.');
+      return;
+    }
+
+    const payload = {
+      machine_id: machineId,
+      priority: document.getElementById('tk_priority').value,
+      remarks: document.getElementById('tk_remarks').value.trim()
+    };
+
+    try {
+      const res = await fetch('/api/maintenance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        alert(data.detail || 'Failed to issue work order.');
+        return;
+      }
+      location.reload();
+    } catch (err) {
+      alert('Error: ' + err.message);
+    }
+  }
+
+  async function handleUpdateTicket(e) {
+    e.preventDefault();
+    const ticketId = document.getElementById('edit_ticket_id').value;
+    const status = document.getElementById('edit_tk_status').value;
+    const remarks = document.getElementById('edit_tk_remarks').value.trim();
+
+    try {
+      const res = await fetch(`/api/maintenance/${ticketId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: status, remarks: remarks })
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        alert(data.detail || 'Failed to update work order.');
+        return;
+      }
+      location.reload();
+    } catch (err) {
+      alert('Error: ' + err.message);
+    }
+  }
+
+  async function deleteTicket(id) {
+    if (!confirm(`Are you sure you want to delete maintenance work order #${id}?`)) return;
+    try {
+      const res = await fetch(`/api/maintenance/${id}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const data = await res.json();
+        alert(data.detail || 'Failed to delete work order.');
+        return;
+      }
+      location.reload();
+    } catch (err) {
+      alert('Error: ' + err.message);
+    }
+  }
+</script>
+{% endblock %}

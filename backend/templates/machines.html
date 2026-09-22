@@ -1,0 +1,607 @@
+{% extends "base.html" %}
+
+{% block title %}Fleet Registry — PredictCNC AI Platform{% endblock %}
+
+{% block content %}
+<!-- Main Glassmorphic Panel (Matching Dashboard, Maintenance & History) -->
+<div class="dashboard-main-card">
+
+  <!-- Header Row: Title & Register Action -->
+  <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 pb-4 mb-4 border-bottom border-secondary border-opacity-25">
+    <div>
+      <div class="d-flex align-items-center gap-2 mb-1">
+        <span class="badge px-2.5 py-1 rounded-pill" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4); font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.1em; font-weight: 700;">MACHINERY FLEET MANAGEMENT</span>
+      </div>
+      <h2 class="font-display fw-bold mb-1 tracking-tight" style="font-size: 1.95rem;">
+        <span style="color: #38bdf8;">CNC Machine</span> <span class="text-white">Fleet Registry</span>
+      </h2>
+      <p class="text-secondary mb-0 font-sans" style="font-size: 0.88rem;">
+        Manage industrial CNC assets, plant departments, OEM specifications, and designated supervisor alert routing.
+      </p>
+    </div>
+    
+    <!-- Top Action Buttons -->
+    <div class="d-flex align-items-center gap-2 flex-wrap">
+      <button type="button" class="btn btn-login-submit py-2 px-3.5 d-flex align-items-center gap-2 shadow" style="font-size: 0.84rem;" data-bs-toggle="modal" data-bs-target="#addMachineModal">
+        <i class="fa-solid fa-plus" style="font-size: 0.9rem;"></i>
+        <span>Register CNC Machine</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Row 1: Fleet Quick KPI Stats -->
+  <div class="row g-3 mb-4">
+    <!-- Stat 1: Total Fleet Units -->
+    <div class="col-12 col-sm-6 col-xl-3">
+      <div class="metric-card-primary">
+        <div class="d-flex align-items-center justify-content-between mb-2">
+          <span class="metric-label font-mono">TOTAL ASSETS</span>
+          <div class="metric-icon-box" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8;">
+            <i class="fa-solid fa-cubes-stacked"></i>
+          </div>
+        </div>
+        <div class="metric-value font-mono">{{ machines|length }}</div>
+        <div class="metric-subtext font-mono text-secondary" style="font-size: 0.74rem;">Registered CNC Fleet</div>
+      </div>
+    </div>
+
+    <!-- Stat 2: Healthy Status -->
+    <div class="col-12 col-sm-6 col-xl-3">
+      <div class="metric-card-primary">
+        <div class="d-flex align-items-center justify-content-between mb-2">
+          <span class="metric-label font-mono">OPERATIONAL</span>
+          <div class="metric-icon-box" style="background: rgba(52, 211, 153, 0.15); color: #34d399;">
+            <i class="fa-solid fa-circle-check"></i>
+          </div>
+        </div>
+        <div class="metric-value font-mono" style="color: #34d399;">
+          {{ machines | selectattr('status', 'equalto', 'Healthy') | list | length }}
+        </div>
+        <div class="metric-subtext font-mono text-secondary" style="font-size: 0.74rem;">Nominal Operating Units</div>
+      </div>
+    </div>
+
+    <!-- Stat 3: Attention / Warning -->
+    <div class="col-12 col-sm-6 col-xl-3">
+      <div class="metric-card-primary">
+        <div class="d-flex align-items-center justify-content-between mb-2">
+          <span class="metric-label font-mono">WARNING / DRIFT</span>
+          <div class="metric-icon-box" style="background: rgba(251, 191, 36, 0.15); color: #fbbf24;">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+          </div>
+        </div>
+        <div class="metric-value font-mono" style="color: #fbbf24;">
+          {{ machines | selectattr('status', 'equalto', 'Warning') | list | length }}
+        </div>
+        <div class="metric-subtext font-mono text-secondary" style="font-size: 0.74rem;">Inspection Recommended</div>
+      </div>
+    </div>
+
+    <!-- Stat 4: Critical Units -->
+    <div class="col-12 col-sm-6 col-xl-3">
+      <div class="metric-card-primary">
+        <div class="d-flex align-items-center justify-content-between mb-2">
+          <span class="metric-label font-mono">CRITICAL RISK</span>
+          <div class="metric-icon-box" style="background: rgba(248, 113, 113, 0.15); color: #f87171;">
+            <i class="fa-solid fa-skull"></i>
+          </div>
+        </div>
+        <div class="metric-value font-mono" style="color: #f87171;">
+          {{ machines | selectattr('status', 'equalto', 'Critical') | list | length }}
+        </div>
+        <div class="metric-subtext font-mono text-secondary" style="font-size: 0.74rem;">Emergency Work Order</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Row 2: Fleet Inventory Table Card -->
+  <div class="table-card-container">
+    
+    <!-- Table Header & Filter Bar -->
+    <div class="table-card-header flex-wrap gap-3">
+      <div class="table-header-title-group">
+        <div class="table-header-icon-badge">
+          <i class="fa-solid fa-list-check" style="color: #38bdf8;"></i>
+        </div>
+        <div>
+          <h6 class="font-display fw-bold text-white mb-0" style="font-size: 0.95rem;">Fleet Asset Inventory</h6>
+          <span class="text-secondary font-mono" style="font-size: 0.72rem;">{{ machines|length }} CNC MACHINES ACTIVE IN YOUR TENANT FLEET</span>
+        </div>
+      </div>
+      
+      <!-- Search Input -->
+      <div class="d-flex align-items-center gap-2">
+        <div class="position-relative" style="min-width: 240px;">
+          <i class="fa-solid fa-magnifying-glass position-absolute text-secondary" style="top: 50%; left: 12px; transform: translateY(-50%); font-size: 0.8rem;"></i>
+          <input type="text" id="machineSearch" class="telemetry-text-input py-1.5 ps-4 font-mono" placeholder="Search machine code, model, supervisor..." style="font-size: 0.8rem;" onkeyup="filterMachines()">
+        </div>
+      </div>
+    </div>
+
+    <!-- Table Responsive Body -->
+    <div class="table-responsive">
+      <table class="table-cnc" id="machinesTable">
+        <thead>
+          <tr>
+            <th>Asset Code</th>
+            <th>Machine Model & OEM</th>
+            <th>Plant Department</th>
+            <th>Operating Status</th>
+            <th>Assigned Supervisor</th>
+            <th>Alert Email Routing</th>
+            <th class="text-end">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for m in machines %}
+          <tr>
+            <!-- Asset Code -->
+            <td>
+              <div class="d-flex align-items-center gap-2">
+                <span class="badge font-mono px-2 py-1" style="background: rgba(56, 189, 248, 0.12); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.35); font-size: 0.78rem; font-weight: 700; border-radius: 6px;">
+                  <i class="fa-solid fa-hashtag me-1 opacity-75"></i>{{ m.machine_code }}
+                </span>
+              </div>
+            </td>
+
+            <!-- Machine Model & OEM -->
+            <td>
+              <div>
+                <div class="fw-bold text-white font-sans" style="font-size: 0.88rem;">{{ m.machine_name }}</div>
+                <div class="text-secondary font-mono" style="font-size: 0.72rem;">OEM: {{ m.manufacturer or 'Mazak / Haas Standard' }}</div>
+              </div>
+            </td>
+
+            <!-- Plant Department -->
+            <td>
+              <span class="font-mono text-light" style="font-size: 0.82rem;">
+                <i class="fa-solid fa-building me-1 text-secondary"></i> {{ m.department or 'Workshop A' }}
+              </span>
+            </td>
+
+            <!-- Operating Status -->
+            <td>
+              {% if m.status == 'Healthy' %}
+                <span class="badge-status-pill badge-status-completed">
+                  <span class="status-bullet">●</span> Healthy
+                </span>
+              {% elif m.status == 'Warning' %}
+                <span class="badge-status-pill badge-status-pending">
+                  <span class="status-bullet">●</span> Warning
+                </span>
+              {% else %}
+                <span class="badge-priority badge-priority-critical">
+                  <i class="fa-solid fa-skull"></i> Critical
+                </span>
+              {% endif %}
+            </td>
+
+            <!-- Supervisor -->
+            <td>
+              <div class="d-flex align-items-center gap-2">
+                <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold font-mono text-white" style="width: 26px; height: 26px; background: rgba(56, 189, 248, 0.2); border: 1px solid rgba(56, 189, 248, 0.4); font-size: 0.7rem;">
+                  {{ (m.supervisor_name or 'U')[:1] | upper }}
+                </div>
+                <span class="text-white font-sans fw-semibold" style="font-size: 0.82rem;">
+                  {{ m.supervisor_name or session.get('user', {}).get('admin_name') or 'Supervisor' }}
+                </span>
+              </div>
+            </td>
+
+            <!-- Alert Email -->
+            <td>
+              <span class="font-mono px-2 py-0.5 rounded" style="background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(51, 65, 85, 0.7); color: #93c5fd; font-size: 0.76rem;">
+                <i class="fa-solid fa-envelope me-1 text-info opacity-75"></i>{{ m.supervisor_email or session.get('user', {}).get('email') or 'supervisor@predictcnc.local' }}
+              </span>
+            </td>
+
+            <!-- Actions -->
+            <td class="text-end">
+              <div class="d-inline-flex align-items-center gap-1.5">
+                <a href="{{ url_for('predict_page') }}?machine_id={{ m.id }}" class="action-btn-icon" style="color: #38bdf8;" title="Execute AI Inference">
+                  <i class="fa-solid fa-bolt"></i>
+                </a>
+                <button type="button" class="action-btn-icon" title="Edit Machine Asset" onclick="openEditModal({{ m.id }}, '{{ m.machine_code }}', '{{ m.machine_name }}', '{{ m.department or '' }}', '{{ m.manufacturer or '' }}', '{{ m.supervisor_name or '' }}', '{{ m.supervisor_email or '' }}')">
+                  <i class="fa-solid fa-pen-to-square"></i>
+                </button>
+                <button type="button" class="action-btn-icon btn-danger-action" title="Delete Asset" onclick="deleteMachine({{ m.id }}, '{{ m.machine_code }}')">
+                  <i class="fa-solid fa-trash"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+          {% else %}
+          <!-- High-End Glassmorphic Empty State -->
+          <tr>
+            <td colspan="7" class="text-center py-5">
+              <div class="py-4">
+                <div class="mx-auto d-flex align-items-center justify-content-center mb-3" style="width: 72px; height: 72px; border-radius: 20px; background: rgba(56, 189, 248, 0.12); border: 1px solid rgba(56, 189, 248, 0.35); box-shadow: 0 0 30px rgba(56, 189, 248, 0.2);">
+                  <i class="fa-solid fa-microchip" style="font-size: 2.2rem; color: #38bdf8;"></i>
+                </div>
+                <h5 class="font-display fw-bold text-white mb-2" style="font-size: 1.25rem;">No CNC Machines Registered Yet</h5>
+                <p class="text-secondary mx-auto mb-4" style="max-width: 520px; font-size: 0.88rem; line-height: 1.5;">
+                  Your fleet starts completely clean. Add your first CNC machine asset to enable multi-sensor telemetry evaluation, LightGBM failure diagnostics, and real-time Gmail SMTP supervisor alerts.
+                </p>
+                <button type="button" class="btn btn-login-submit py-2.5 px-4 d-inline-flex align-items-center gap-2 shadow" style="font-size: 0.88rem;" data-bs-toggle="modal" data-bs-target="#addMachineModal">
+                  <i class="fa-solid fa-plus"></i>
+                  <span>Register Your First CNC Machine</span>
+                </button>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ========================================== -->
+<!-- 1. REGISTER CNC ASSET MODAL (HIGH CONTRAST & SLEEK) -->
+<!-- ========================================== -->
+<div class="modal fade" id="addMachineModal" tabindex="-1" aria-labelledby="addMachineModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content" style="background: linear-gradient(145deg, #0b1329 0%, #060b18 100%); border: 1px solid rgba(56, 189, 248, 0.4); border-radius: 20px; box-shadow: 0 25px 70px rgba(0, 0, 0, 0.85), 0 0 40px rgba(56, 189, 248, 0.2);">
+      
+      <!-- Modal Header -->
+      <div class="modal-header px-4 pt-4 pb-3 border-bottom border-secondary border-opacity-25 d-flex align-items-center justify-content-between">
+        <div class="d-flex align-items-center gap-3">
+          <div class="table-header-icon-badge" style="width: 38px; height: 38px; font-size: 1.05rem;">
+            <i class="fa-solid fa-plus" style="color: #38bdf8;"></i>
+          </div>
+          <div>
+            <h5 class="modal-title font-display fw-bold text-white mb-0" id="addMachineModalLabel" style="font-size: 1.15rem;">
+              Register New CNC Asset
+            </h5>
+            <div class="text-secondary font-mono" style="font-size: 0.72rem; letter-spacing: 0.04em;">FLEET ASSET ONBOARDING & SENSOR CONFIGURATION</div>
+          </div>
+        </div>
+        
+        <div class="d-flex align-items-center gap-2">
+          <!-- 1-Click Sample Auto-Fill Button -->
+          <button type="button" class="btn btn-sm btn-cnc-outline py-1 px-2.5 font-mono" style="font-size: 0.74rem; border-color: rgba(56, 189, 248, 0.4); color: #38bdf8;" onclick="quickFillSampleMachine()" title="Fill with standard sample data">
+            <i class="fa-solid fa-wand-magic-sparkles me-1"></i> Quick Fill Example
+          </button>
+          <button type="button" class="btn-close btn-close-white ms-2" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+      </div>
+      
+      <!-- Modal Form -->
+      <form onsubmit="handleAddMachine(event)">
+        <div class="modal-body p-4">
+
+          <!-- Section 1: Asset Identification & Specs -->
+          <div class="d-flex align-items-center gap-2 mb-3 pb-1 border-bottom border-secondary border-opacity-25">
+            <i class="fa-solid fa-microchip" style="color: #38bdf8; font-size: 0.85rem;"></i>
+            <span class="font-mono text-white fw-bold" style="font-size: 0.78rem; letter-spacing: 0.06em; text-transform: uppercase;">
+              1. Asset Identification & Hardware Specifications
+            </span>
+          </div>
+
+          <div class="row g-3 mb-4">
+            <!-- Asset Code -->
+            <div class="col-12 col-md-5">
+              <div class="telemetry-input-header">
+                <div class="telemetry-field-label">
+                  <span class="telemetry-field-icon"><i class="fa-solid fa-hashtag" style="color: #38bdf8;"></i></span>
+                  <span>Asset Code / Identifier *</span>
+                </div>
+              </div>
+              <input type="text" id="add_code" class="telemetry-text-input font-mono" placeholder="e.g. CNC-012" required style="font-size: 0.88rem;">
+            </div>
+
+            <!-- Machine Name -->
+            <div class="col-12 col-md-7">
+              <div class="telemetry-input-header">
+                <div class="telemetry-field-label">
+                  <span class="telemetry-field-icon"><i class="fa-solid fa-gear" style="color: #fbbf24;"></i></span>
+                  <span>Machine Model / Description *</span>
+                </div>
+              </div>
+              <input type="text" id="add_name" class="telemetry-text-input" placeholder="e.g. 5-Axis Heavy Machining Center" required style="font-size: 0.88rem;">
+            </div>
+
+            <!-- Plant Department -->
+            <div class="col-12 col-md-6">
+              <div class="telemetry-input-header">
+                <div class="telemetry-field-label">
+                  <span class="telemetry-field-icon"><i class="fa-solid fa-building" style="color: #34d399;"></i></span>
+                  <span>Plant Workshop / Bay</span>
+                </div>
+              </div>
+              <input type="text" id="add_dept" class="telemetry-text-input" placeholder="e.g. Workshop Bay A" style="font-size: 0.88rem;">
+            </div>
+
+            <!-- Manufacturer -->
+            <div class="col-12 col-md-6">
+              <div class="telemetry-input-header">
+                <div class="telemetry-field-label">
+                  <span class="telemetry-field-icon"><i class="fa-solid fa-industry" style="color: #c084fc;"></i></span>
+                  <span>OEM Manufacturer</span>
+                </div>
+              </div>
+              <input type="text" id="add_mfg" class="telemetry-text-input" placeholder="e.g. Haas Automation / Mazak" style="font-size: 0.88rem;">
+            </div>
+          </div>
+
+          <!-- Section 2: Supervisor & Alert Routing -->
+          <div class="d-flex align-items-center gap-2 mb-3 pb-1 border-bottom border-secondary border-opacity-25">
+            <i class="fa-solid fa-envelope-circle-check" style="color: #38bdf8; font-size: 0.85rem;"></i>
+            <span class="font-mono text-white fw-bold" style="font-size: 0.78rem; letter-spacing: 0.06em; text-transform: uppercase;">
+              2. Supervisor Assignment & Alert Routing
+            </span>
+          </div>
+
+          <div class="row g-3">
+            <!-- Supervisor Name -->
+            <div class="col-12 col-md-5">
+              <div class="telemetry-input-header">
+                <div class="telemetry-field-label">
+                  <span class="telemetry-field-icon"><i class="fa-solid fa-user-tie" style="color: #38bdf8;"></i></span>
+                  <span>Assigned Supervisor</span>
+                </div>
+              </div>
+              <input type="text" id="add_sup_name" class="telemetry-text-input" placeholder="e.g. Divya Santoki" value="{{ session.get('user', {}).get('admin_name') or '' }}" style="font-size: 0.88rem;">
+            </div>
+
+            <!-- Supervisor Email -->
+            <div class="col-12 col-md-7">
+              <div class="telemetry-input-header">
+                <div class="telemetry-field-label">
+                  <span class="telemetry-field-icon"><i class="fa-solid fa-at" style="color: #f87171;"></i></span>
+                  <span>Supervisor Alert Email *</span>
+                </div>
+                <span class="telemetry-field-unit">GMAIL SMTP</span>
+              </div>
+              <input type="email" id="add_sup_email" class="telemetry-text-input font-mono" placeholder="e.g. supervisor@gmail.com" value="{{ session.get('user', {}).get('email') or '' }}" required style="font-size: 0.88rem;">
+            </div>
+          </div>
+
+          <!-- Info Alert Helper Banner -->
+          <div class="mt-3.5 p-3 rounded-3 d-flex align-items-center gap-2.5" style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(56, 189, 248, 0.35); font-size: 0.78rem;">
+            <i class="fa-solid fa-circle-info text-info fs-6 flex-shrink-0"></i>
+            <span class="text-secondary font-mono">
+              Automated Warning & Critical failure alerts evaluated by the LightGBM model will be delivered directly to this supervisor email via Gmail SMTP.
+            </span>
+          </div>
+
+        </div>
+
+        <!-- Modal Footer -->
+        <div class="modal-footer px-4 py-3 border-top border-secondary border-opacity-25 d-flex justify-content-between align-items-center">
+          <button type="button" class="btn btn-cnc-outline py-2 px-3.5" data-bs-dismiss="modal" style="font-size: 0.84rem;">
+            Cancel
+          </button>
+          <button type="submit" id="saveMachineBtn" class="btn-login-submit py-2 px-4 d-inline-flex align-items-center gap-2" style="font-size: 0.86rem; width: auto;">
+            <i class="fa-solid fa-floppy-disk"></i>
+            <span>Save & Register Asset</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ========================================== -->
+<!-- 2. EDIT CNC ASSET MODAL -->
+<!-- ========================================== -->
+<div class="modal fade" id="editMachineModal" tabindex="-1" aria-labelledby="editMachineModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content" style="background: linear-gradient(145deg, #0b1329 0%, #060b18 100%); border: 1px solid rgba(56, 189, 248, 0.4); border-radius: 20px; box-shadow: 0 25px 70px rgba(0, 0, 0, 0.85), 0 0 40px rgba(56, 189, 248, 0.2);">
+      
+      <div class="modal-header px-4 pt-4 pb-3 border-bottom border-secondary border-opacity-25 d-flex align-items-center justify-content-between">
+        <div class="d-flex align-items-center gap-3">
+          <div class="table-header-icon-badge" style="width: 38px; height: 38px; font-size: 1.05rem;">
+            <i class="fa-solid fa-pen-to-square" style="color: #38bdf8;"></i>
+          </div>
+          <div>
+            <h5 class="modal-title font-display fw-bold text-white mb-0" id="editMachineModalLabel" style="font-size: 1.15rem;">
+              Edit CNC Asset: <span id="edit_modal_code_display" class="text-info font-mono">--</span>
+            </h5>
+            <div class="text-secondary font-mono" style="font-size: 0.72rem; letter-spacing: 0.04em;">UPDATE HARDWARE SPECS & ALERT CONFIGURATION</div>
+          </div>
+        </div>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      
+      <form onsubmit="handleEditMachine(event)">
+        <input type="hidden" id="edit_id">
+        <div class="modal-body p-4">
+          <div class="row g-3 mb-3">
+            <div class="col-12 col-md-5">
+              <div class="telemetry-input-header">
+                <div class="telemetry-field-label">
+                  <span class="telemetry-field-icon"><i class="fa-solid fa-hashtag" style="color: #38bdf8;"></i></span>
+                  <span>Asset Code (Read-Only)</span>
+                </div>
+              </div>
+              <input type="text" id="edit_code" class="telemetry-text-input font-mono" readonly style="opacity: 0.7; font-size: 0.88rem;">
+            </div>
+
+            <div class="col-12 col-md-7">
+              <div class="telemetry-input-header">
+                <div class="telemetry-field-label">
+                  <span class="telemetry-field-icon"><i class="fa-solid fa-gear" style="color: #fbbf24;"></i></span>
+                  <span>Machine Model / Description *</span>
+                </div>
+              </div>
+              <input type="text" id="edit_name" class="telemetry-text-input" required style="font-size: 0.88rem;">
+            </div>
+
+            <div class="col-12 col-md-6">
+              <div class="telemetry-input-header">
+                <div class="telemetry-field-label">
+                  <span class="telemetry-field-icon"><i class="fa-solid fa-building" style="color: #34d399;"></i></span>
+                  <span>Plant Workshop / Bay</span>
+                </div>
+              </div>
+              <input type="text" id="edit_dept" class="telemetry-text-input" style="font-size: 0.88rem;">
+            </div>
+
+            <div class="col-12 col-md-6">
+              <div class="telemetry-input-header">
+                <div class="telemetry-field-label">
+                  <span class="telemetry-field-icon"><i class="fa-solid fa-industry" style="color: #c084fc;"></i></span>
+                  <span>OEM Manufacturer</span>
+                </div>
+              </div>
+              <input type="text" id="edit_mfg" class="telemetry-text-input" style="font-size: 0.88rem;">
+            </div>
+
+            <div class="col-12 col-md-5">
+              <div class="telemetry-input-header">
+                <div class="telemetry-field-label">
+                  <span class="telemetry-field-icon"><i class="fa-solid fa-user-tie" style="color: #38bdf8;"></i></span>
+                  <span>Assigned Supervisor</span>
+                </div>
+              </div>
+              <input type="text" id="edit_sup_name" class="telemetry-text-input" style="font-size: 0.88rem;">
+            </div>
+
+            <div class="col-12 col-md-7">
+              <div class="telemetry-input-header">
+                <div class="telemetry-field-label">
+                  <span class="telemetry-field-icon"><i class="fa-solid fa-at" style="color: #f87171;"></i></span>
+                  <span>Supervisor Alert Email *</span>
+                </div>
+              </div>
+              <input type="email" id="edit_sup_email" class="telemetry-text-input font-mono" required style="font-size: 0.88rem;">
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer px-4 py-3 border-top border-secondary border-opacity-25 d-flex justify-content-between align-items-center">
+          <button type="button" class="btn btn-cnc-outline py-2 px-3.5" data-bs-dismiss="modal" style="font-size: 0.84rem;">
+            Cancel
+          </button>
+          <button type="submit" id="updateMachineBtn" class="btn-login-submit py-2 px-4 d-inline-flex align-items-center gap-2" style="font-size: 0.86rem; width: auto;">
+            <i class="fa-solid fa-check"></i>
+            <span>Update Asset Changes</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  function filterMachines() {
+    const q = document.getElementById('machineSearch').value.toLowerCase();
+    const rows = document.querySelectorAll('#machinesTable tbody tr');
+    rows.forEach(r => {
+      r.style.display = r.innerText.toLowerCase().includes(q) ? '' : 'none';
+    });
+  }
+
+  function quickFillSampleMachine() {
+    const randomNum = Math.floor(100 + Math.random() * 900);
+    document.getElementById('add_code').value = `CNC-${randomNum}`;
+    document.getElementById('add_name').value = '5-Axis High-Speed Machining Center';
+    document.getElementById('add_dept').value = 'Workshop Bay A';
+    document.getElementById('add_mfg').value = 'Haas Automation';
+  }
+
+  async function handleAddMachine(e) {
+    e.preventDefault();
+    const saveBtn = document.getElementById('saveMachineBtn');
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
+
+    const payload = {
+      machine_code: document.getElementById('add_code').value.trim(),
+      machine_name: document.getElementById('add_name').value.trim(),
+      department: document.getElementById('add_dept').value.trim(),
+      manufacturer: document.getElementById('add_mfg').value.trim(),
+      supervisor_name: document.getElementById('add_sup_name').value.trim(),
+      supervisor_email: document.getElementById('add_sup_email').value.trim()
+    };
+
+    try {
+      const res = await fetch('/api/machines', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.detail || 'Failed to add machine.');
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save & Register Asset';
+        return;
+      }
+      location.reload();
+    } catch (err) {
+      alert('Error adding machine: ' + err.message);
+      saveBtn.disabled = false;
+      saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save & Register Asset';
+    }
+  }
+
+  function openEditModal(id, code, name, dept, mfg, supName, supEmail) {
+    document.getElementById('edit_id').value = id;
+    document.getElementById('edit_code').value = code;
+    document.getElementById('edit_modal_code_display').innerText = code;
+    document.getElementById('edit_name').value = name;
+    document.getElementById('edit_dept').value = dept;
+    document.getElementById('edit_mfg').value = mfg;
+    document.getElementById('edit_sup_name').value = supName;
+    document.getElementById('edit_sup_email').value = supEmail;
+
+    const modal = new bootstrap.Modal(document.getElementById('editMachineModal'));
+    modal.show();
+  }
+
+  async function handleEditMachine(e) {
+    e.preventDefault();
+    const id = document.getElementById('edit_id').value;
+    const updateBtn = document.getElementById('updateMachineBtn');
+    updateBtn.disabled = true;
+    updateBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Updating...';
+
+    const payload = {
+      machine_name: document.getElementById('edit_name').value.trim(),
+      department: document.getElementById('edit_dept').value.trim(),
+      manufacturer: document.getElementById('edit_mfg').value.trim(),
+      supervisor_name: document.getElementById('edit_sup_name').value.trim(),
+      supervisor_email: document.getElementById('edit_sup_email').value.trim()
+    };
+
+    try {
+      const res = await fetch(`/api/machines/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.detail || 'Failed to update machine.');
+        updateBtn.disabled = false;
+        updateBtn.innerHTML = '<i class="fa-solid fa-check"></i> Update Asset Changes';
+        return;
+      }
+      location.reload();
+    } catch (err) {
+      alert('Error updating machine: ' + err.message);
+      updateBtn.disabled = false;
+      updateBtn.innerHTML = '<i class="fa-solid fa-check"></i> Update Asset Changes';
+    }
+  }
+
+  async function deleteMachine(id, code) {
+    if (!confirm(`Are you sure you want to delete CNC machine ${code} from your fleet?`)) return;
+    try {
+      const res = await fetch(`/api/machines/${id}`, { method: 'DELETE' });
+      if (!res.ok) {
+        alert('Failed to delete.');
+        return;
+      }
+      location.reload();
+    } catch (err) {
+      alert('Error: ' + err.message);
+    }
+  }
+</script>
+{% endblock %}
+

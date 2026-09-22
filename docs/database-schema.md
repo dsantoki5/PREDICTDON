@@ -1,73 +1,83 @@
-﻿# PredictCNC — Database Schema Specification
+# PredictCNC — MySQL Database Schema Specification
 
-## Schema Design (SQLAlchemy ORM Models)
+## Schema Design (MySQL / PyMySQL)
 
-`mermaid
+```mermaid
 erDiagram
-    COMPANIES ||--o{ USERS : has
-    COMPANIES ||--o{ MACHINES : owns
+    USERS ||--o{ MACHINES : owns
     MACHINES ||--o{ PREDICTIONS : records
-    MACHINES ||--o{ MAINTENANCE_TICKETS : has
-    PREDICTIONS ||--o| MAINTENANCE_TICKETS : triggers
-
-    COMPANIES {
-        int id PK
-        string name UK
-        datetime created_at
-    }
+    MACHINES ||--o{ MAINTENANCE : has
+    MACHINES ||--o{ NOTIFICATION_LOGS : dispatches
+    PREDICTIONS ||--o| MAINTENANCE : triggers
 
     USERS {
         int id PK
-        int company_id FK
+        string company_name
+        string admin_name
+        string email
         string username UK
-        string email UK
-        string hashed_password
-        string full_name
+        string password
         string role
         datetime created_at
     }
 
     MACHINES {
         int id PK
-        int company_id FK
-        string machine_code
+        int user_id FK
+        string machine_code UK
         string machine_name
         string department
         string manufacturer
         date installation_date
-        string status Healthy | Warning | Critical
-        datetime updated_at
+        string status
+        string supervisor_name
+        string supervisor_email
+        datetime created_at
     }
 
     PREDICTIONS {
         int id PK
         int machine_id FK
-        float air_temperature
-        float process_temperature
-        float rotational_speed
-        float torque
-        float tool_wear
-        float rpm_torque_interaction
-        float load_stress
-        float temperature_difference
-        float temperature_ratio
-        float tool_wear_mean_10
-        float air_temp_mean_10
-        string prediction_label
-        float failure_probability
-        string risk_level
-        json diagnosis_data
+        double air_temperature
+        double process_temperature
+        double rotational_speed
+        double torque
+        double tool_wear
+        double load_density
+        double rpm_torque_interaction
+        double temperature_difference
+        double temperature_ratio
+        double load_stress
+        string prediction
+        int predicted_class
+        string model_version
+        double probability
+        double healthy_probability
+        double warning_probability
+        double critical_probability
+        decimal confidence
         datetime predicted_at
     }
 
-    MAINTENANCE_TICKETS {
+    MAINTENANCE {
         int id PK
         int machine_id FK
         int prediction_id FK
-        string priority High | Medium | Low
-        string status Pending | In Progress | Completed
+        string priority
+        string status
         text remarks
         datetime created_at
-        datetime resolved_at
     }
-`
+
+    NOTIFICATION_LOGS {
+        int id PK
+        int machine_id FK
+        string recipient_email
+        string alert_type
+        string health_status
+        string prediction
+        string delivery_status
+        text error_message
+        datetime sent_at
+    }
+```

@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}Register Company — PredictCNC AI Maintenance{% endblock %}
+
+{% block auth_content %}
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-12 col-sm-10 col-md-7 col-lg-5">
+      
+      <div class="text-center mb-4">
+        <div class="d-inline-flex brand-icon p-3 mb-2" style="width: 56px; height: 56px; border-radius: 14px; font-size: 1.65rem;">
+          <i class="fa-solid fa-microchip"></i>
+        </div>
+        <h2 class="font-display fw-bold text-white mb-1">Predict<span style="color: var(--cnc-blue);">CNC</span></h2>
+        <p class="text-muted small font-mono mb-0">AI Industrial Telemetry & Failure Prevention</p>
+      </div>
+
+      <div class="card card-cnc p-4 shadow-lg" style="background-color: var(--bg-ink-900);">
+        <div class="text-center pb-3 mb-3 border-bottom" style="border-color: var(--border-ink-line) !important;">
+          <h5 class="fw-bold text-white mb-1 font-display">Register Organization</h5>
+          <span class="text-muted small">Create administrator account to monitor your plant machinery</span>
+        </div>
+        
+        <form method="POST" action="{{ url_for('register_page') }}">
+          <div class="mb-3">
+            <label class="form-label font-mono small text-muted">Company / Facility Name</label>
+            <input type="text" name="company_name" class="form-control form-control-cnc" placeholder="e.g. LDRP Precision Engineering" required>
+          </div>
+
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label class="form-label font-mono small text-muted">Administrator Name</label>
+              <input type="text" name="admin_name" class="form-control form-control-cnc" placeholder="Divya Santoki" required>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label class="form-label font-mono small text-muted">Alert Notification Email</label>
+              <input type="email" name="email" class="form-control form-control-cnc" placeholder="admin@example.com" required>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label class="form-label font-mono small text-muted">Username</label>
+              <input type="text" name="username" class="form-control form-control-cnc" placeholder="divya_admin" required>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label class="form-label font-mono small text-muted">Password</label>
+              <input type="password" name="password" class="form-control form-control-cnc" placeholder="••••••••" required>
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-cnc-primary w-100 py-2.5 mt-2">
+            <i class="fa-solid fa-user-plus"></i> Create Organization Account
+          </button>
+        </form>
+
+        <div class="mt-4 pt-3 border-top text-center" style="border-color: var(--border-ink-line) !important;">
+          <p class="text-muted small mb-0">Already registered? <a href="{{ url_for('login_page') }}" class="text-info fw-semibold text-decoration-none">Back to Sign In</a></p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}

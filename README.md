@@ -1,75 +1,170 @@
 # PredictCNC — AI Predictive Maintenance System
 
-PredictCNC is an enterprise-grade AI-powered predictive maintenance platform designed for CNC machines. It processes multi-sensor telemetry (spindle speed, torque, air and process temperatures, tool wear) to predict machine failure risk, diagnose failure modes, automate maintenance ticketing, and generate compliance-ready operational reports.
-
-## Architecture
-
-This project is built using a modern decoupled architecture:
-
-- **frontend/**: React 18, TypeScript, Vite, Tailwind CSS, Lucide icons, Chart.js.
-- **backend/**: FastAPI (Python), Pydantic v2, SQLAlchemy ORM, JWT Authentication (PostgreSQL / SQLite ready).
-- **ml/**: Machine Learning pipeline, model training, feature engineering, and inference engine.
-- **docs/**: Comprehensive system architecture, migration notes, and API documentation.
+PredictCNC is an industrial AI predictive maintenance platform designed for CNC machinery. It processes multi-sensor telemetry (spindle rotational speed, torque, air and process temperatures, and tool wear) to predict machine failure risk, diagnose root-cause anomalies, automate maintenance work orders, and dispatch real-time Gmail SMTP alerts.
 
 ---
 
-## Quick Start Guide for Team Members
+## 1. Approved Technology Stack
 
-### 1. Backend Setup (FastAPI & Database)
+PredictCNC is strictly built using the following approved engineering and academic stack:
 
-```bash
-cd backend
-python -m venv .venv
+### Frontend
+- **HTML5 & CSS3**
+- **JavaScript (Vanilla ES6+)**
+- **Bootstrap 5.3**
 
-# Windows:
-.venv\Scripts\activate
-# Linux/macOS:
-# source .venv/bin/activate
+### Backend
+- **Python 3.10+**
+- **Flask** (Modular routing, session authentication, and REST APIs)
 
-pip install -r requirements.txt
-cp .env.example .env
+### Artificial Intelligence / Machine Learning
+- **LightGBM** (Authoritative 44-feature multi-class classifier `LightGBM_No_SMOTE_Final.joblib`)
+- **Scikit-learn**
+- **Pandas**
+- **NumPy**
+- **Joblib**
 
-# Optional: Run the seeder to ensure all machines, users, predictions and maintenance tickets are loaded
-python seed_db.py
+### Database
+- **MySQL & PyMySQL** (Native compatibility with XAMPP MySQL `localhost:3306` with resilient SQLite fallback)
 
-# Start the Backend Server
-uvicorn src.main:app --reload --port 8000
+### Visualization
+- **Chart.js** (Interactive health gauges and telemetry trend charts)
+- **Matplotlib** (Statistical distribution plots)
+
+### Reporting
+- **ReportLab** (Compliance-ready automated executive PDF maintenance reports)
+
+### Email Notifications
+- **Python smtplib**
+- **Python email.mime**
+- **Gmail SMTP Gateway** (TLS / STARTTLS on Port 587)
+
+### Development Environment
+- **Visual Studio Code**
+- **Git & GitHub**
+- **XAMPP (Apache + MySQL)**
+
+---
+
+## 2. System Architecture
+
 ```
-- Interactive API documentation will be available at: http://localhost:8000/docs
-- Health check: http://localhost:8000/api/v1/health
-
-### 2. Frontend Setup (React + Vite)
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-- The Web Dashboard will be available at: http://localhost:5173
-
-### 3. Machine Learning Pipeline (LightGBM)
-
-```bash
-cd ml
-pip install -r requirements.txt
-python src/inference.py
+User (Web Browser)
+        ↓
+HTML5 + CSS3 + JavaScript + Bootstrap 5 + Chart.js
+        ↓ (HTTP / REST)
+Python Flask (app.py)
+        ↓
+MySQL / PyMySQL Database (XAMPP)
+        ↓
+Feature Engineering (44 Dynamic Physics Dimensions)
+        ↓
+LightGBM Multi-Class ML Inference
+        ↓
+Machine Health Classification
+├── NORMAL (Class 0)   ──> Normal Operation (No Email)
+├── WARNING (Class 1)  ──> Python smtplib / email.mime ──> Gmail SMTP ──> Supervisor Email
+└── CRITICAL (Class 2) ──> Python smtplib / email.mime ──> Gmail SMTP ──> Supervisor Email
 ```
 
 ---
 
-## Database & Data
+## 3. Quick Start Guide
 
-- Pre-loaded database file: `backend/predictcnc.db` (SQLite)
-- SQL Dump file: `backend/database_dump.sql` (can be imported directly into PostgreSQL or SQLite)
-- JSON Seed dataset: `backend/database_seed.json`
-- Python Seeder: `python backend/seed_db.py`
-- Raw Telemetry Training Dataset: `ml/data/raw/ai4i2020.csv`
-- Pre-trained Production Models: `ml/models/LightGBM_No_SMOTE_Final.joblib` and `ml/models/final_lightgbm_model.pkl`
+### Prerequisites
+- Python 3.10+ installed
+- XAMPP (MySQL running on port 3306) or local MySQL
+
+### Installation
+
+1. **Clone the repository and navigate to backend**:
+   ```bash
+   cd backend
+   ```
+
+2. **Install Python dependencies**:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+3. **Configure Environment Variables (`backend/.env`)**:
+   ```env
+   SECRET_KEY=predictcnc-academic-secret-key-2026
+   FLASK_ENV=development
+   FLASK_PORT=5000
+
+   # MySQL (XAMPP default)
+   MYSQL_HOST=localhost
+   MYSQL_PORT=3306
+   MYSQL_USER=root
+   MYSQL_PASSWORD=
+   MYSQL_DB=predictcnc
+
+   # Gmail SMTP Configuration
+   SMTP_HOST=smtp.gmail.com
+   SMTP_PORT=587
+   SMTP_USER=your-email@gmail.com
+   SMTP_PASSWORD=your-16-character-app-password
+   SMTP_FROM=your-email@gmail.com
+   SMTP_ALERT_COOLDOWN_MINUTES=15
+   DEFAULT_SUPERVISOR_EMAIL=supervisor@predictcnc.local
+   ```
+
+4. **Seed Database**:
+   ```bash
+   python seed_db.py
+   ```
+
+5. **Start Flask Server**:
+   ```bash
+   python app.py
+   ```
+   Open your browser at **http://localhost:5000**
 
 ---
 
-## Documentation
-Refer to the `docs/` directory for detailed documentation:
-- [System Architecture](docs/architecture.md)
-- [Migration Notes](docs/migration-notes.md)
-- [Database Schema](docs/database-schema.md)
+## 4. Default Credentials
+
+- **Username**: `admin`
+- **Password**: `admin123`
+
+---
+
+## 5. Gmail SMTP Alert System
+
+### Alert Trigger Policy
+| Machine Status | AI Probability | Action Taken |
+| :--- | :--- | :--- |
+| **NORMAL** | $< 25\%$ | No email dispatched (`skipped_healthy`). |
+| **WARNING** | $25\% - 75\%$ | High-priority Warning alert with telemetry snapshot & preventative maintenance checklist. |
+| **CRITICAL** | $> 75\%$ | Emergency Critical alert with root-cause analysis + automated High priority ticket. |
+
+### Gmail App Password Setup
+1. Go to **Google Account** &rarr; **Security**.
+2. Enable **2-Step Verification**.
+3. Go to **App Passwords** and generate a 16-character password for `PredictCNC`.
+4. Add your email and 16-character password to `backend/.env`.
+
+### Anti-Spam Cooldown & Fault Tolerance
+- **Duplicate Suppression**: Repeated Warning alerts within 15 minutes (`SMTP_ALERT_COOLDOWN_MINUTES=15`) are suppressed to prevent inbox flooding.
+- **Non-Blocking Execution**: If the SMTP server is unavailable or credentials are invalid, the prediction still completes instantly with 100% success and the incident is logged safely in `notification_logs`.
+
+---
+
+## 6. Automated Testing
+
+Run the full stack test suite:
+```bash
+python -m unittest tests/test_predictcnc_stack.py -v
+```
+
+All 9 test cases cover:
+1. NORMAL prediction (No email)
+2. WARNING alert dispatch
+3. CRITICAL alert dispatch
+4. SMTP network failure resilience
+5. Missing supervisor email safe handling
+6. Invalid credentials handling
+7. Duplicate alert cooldown suppression
+8. ReportLab PDF generation
+9. Flask endpoints and REST APIs

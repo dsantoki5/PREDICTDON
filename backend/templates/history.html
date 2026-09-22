@@ -1,0 +1,237 @@
+{% extends "base.html" %}
+
+{% block title %}Prediction History — PredictCNC{% endblock %}
+
+{% block content %}
+<!-- Main Glassmorphic Panel (Matching Login Page & Industrial UI) -->
+<div class="dashboard-main-card">
+
+  <!-- Header Row: Title & Actions -->
+  <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 pb-4 mb-4 border-bottom border-secondary border-opacity-25">
+    <div>
+      <div class="d-flex align-items-center gap-2 mb-1">
+        <span class="badge px-2.5 py-1 rounded-pill" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4); font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.1em; font-weight: 700;">AUDIT TRAIL</span>
+      </div>
+      <h2 class="font-display fw-bold mb-1 tracking-tight" style="font-size: 1.95rem;">
+        <span style="color: #38bdf8;">Prediction</span> <span class="text-white">History</span>
+      </h2>
+      <p class="text-secondary mb-0 font-sans" style="font-size: 0.88rem;">
+        Comprehensive audit log of all AI machine evaluations and sensor inputs.
+      </p>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+      <button onclick="exportTableToCSV()" class="btn btn-cnc-outline rounded-3 p-2.5 d-flex align-items-center gap-2" style="border-color: rgba(51, 65, 85, 0.9); font-size: 0.82rem;" title="Export CSV">
+        <i class="fa-solid fa-download text-light"></i>
+        <span class="d-none d-sm-inline font-mono">Export CSV</span>
+      </button>
+      <button onclick="window.location.reload()" class="btn btn-cnc-outline rounded-3 p-2.5 d-flex align-items-center justify-content-center" style="width: 42px; height: 42px; border-color: rgba(51, 65, 85, 0.9);" title="Refresh History">
+        <i class="fa-solid fa-rotate-right text-light" style="font-size: 0.95rem;"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- Filter Row (Matching Screenshot) -->
+  <div class="d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-3 mb-4">
+    <div class="d-flex align-items-center gap-2">
+      <span class="font-mono text-secondary" style="font-size: 0.82rem; white-space: nowrap;">Filter by Machine:</span>
+      <select id="machineFilter" class="form-select login-form-input font-mono" style="width: auto; min-width: 240px; padding: 0.45rem 2rem 0.45rem 0.85rem !important; background-color: rgba(15, 23, 42, 0.85) !important;" onchange="filterHistory()">
+        <option value="all">All Machines ({{ history|length }} runs)</option>
+        {% for m in machines %}
+        <option value="{{ m.machine_code }}">{{ m.machine_code }} — {{ m.machine_name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="font-mono text-secondary" style="font-size: 0.82rem;">
+      Showing <span class="text-white fw-bold" id="visibleRunsCount">{{ history|length }}</span> Recorded Runs
+    </div>
+  </div>
+
+  <!-- Telemetry History Data Table -->
+  <div class="table-responsive" style="border-radius: 12px; border: 1px solid rgba(30, 41, 59, 0.7); background: rgba(11, 17, 32, 0.65);">
+    <table class="table-cnc" id="historyTable">
+      <thead>
+        <tr>
+          <th>RUN ID</th>
+          <th>MACHINE</th>
+          <th>AIR TEMP</th>
+          <th>PROC TEMP</th>
+          <th>RPM</th>
+          <th>TORQUE</th>
+          <th>TOOL WEAR</th>
+          <th>PREDICTION</th>
+          <th>PROBABILITY</th>
+          <th>TIMESTAMP</th>
+          <th class="text-end">ACTION</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for h in history %}
+        <tr data-machine="{{ h.machine_code }}">
+          <!-- Run ID -->
+          <td class="font-mono fw-bold" style="color: #38bdf8; font-size: 0.88rem;">
+            #{{ h.id }}
+          </td>
+
+          <!-- Machine -->
+          <td>
+            <span class="font-mono fw-bold text-white" style="font-size: 0.88rem;">{{ h.machine_code }}</span>
+          </td>
+
+          <!-- Air Temp -->
+          <td class="font-mono text-light" style="font-size: 0.84rem;">
+            {{ "%.1f"|format(h.air_temperature) }} K
+          </td>
+
+          <!-- Process Temp -->
+          <td class="font-mono text-light" style="font-size: 0.84rem;">
+            {{ "%.1f"|format(h.process_temperature) }} K
+          </td>
+
+          <!-- RPM -->
+          <td class="font-mono text-light" style="font-size: 0.84rem;">
+            {{ "%.0f"|format(h.rotational_speed) }}
+          </td>
+
+          <!-- Torque -->
+          <td class="font-mono text-light" style="font-size: 0.84rem;">
+            {{ "%.1f"|format(h.torque) }} Nm
+          </td>
+
+          <!-- Tool Wear -->
+          <td class="font-mono text-light" style="font-size: 0.84rem;">
+            {{ "%.0f"|format(h.tool_wear) }} min
+          </td>
+
+          <!-- Prediction Badge -->
+          <td>
+            {% if h.predicted_class == 2 or (h.prediction and 'Failure' in h.prediction) %}
+              <span class="badge rounded-1 px-2.5 py-1" style="background: rgba(239, 68, 68, 0.14); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.45); font-family: var(--font-sans); font-size: 0.76rem; font-weight: 600;">
+                Machine Failure
+              </span>
+            {% elif h.predicted_class == 1 or (h.prediction and ('Warning' in h.prediction or 'Degraded' in h.prediction or 'Inspection' in h.prediction)) %}
+              <span class="badge rounded-1 px-2.5 py-1" style="background: rgba(245, 158, 11, 0.14); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.45); font-family: var(--font-sans); font-size: 0.76rem; font-weight: 600;">
+                Degraded / Anomaly Alert
+              </span>
+            {% else %}
+              <span class="badge rounded-1 px-2.5 py-1" style="background: rgba(16, 185, 129, 0.14); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.45); font-family: var(--font-sans); font-size: 0.76rem; font-weight: 600;">
+                Normal Operation
+              </span>
+            {% endif %}
+          </td>
+
+          <!-- Probability -->
+          <td class="font-mono fw-bold text-white" style="font-size: 0.84rem;">
+            {{ "%.1f"|format(h.probability) }}%
+          </td>
+
+          <!-- Timestamp -->
+          <td class="font-mono text-secondary" style="font-size: 0.8rem; white-space: nowrap;">
+            {% if h.predicted_at %}
+              {% if h.predicted_at.strftime is defined %}
+                {{ h.predicted_at.strftime('%m/%d/%Y, %I:%M:%S %p') }}
+              {% else %}
+                {{ (h.predicted_at|string)[:19] }}
+              {% endif %}
+            {% else %}
+              --
+            {% endif %}
+          </td>
+
+          <!-- Delete Action -->
+          <td class="text-end">
+            <button class="action-btn-icon btn-danger-action" title="Delete Record" onclick="deleteHistoryRecord({{ h.id }})">
+              <i class="fa-solid fa-trash"></i>
+            </button>
+          </td>
+        </tr>
+        {% else %}
+        <tr id="emptyTableRow">
+          <td colspan="11" class="text-center py-5 font-mono text-secondary" style="font-size: 0.88rem;">
+            <i class="fa-solid fa-chart-line mb-2 fs-4 d-block text-secondary opacity-50"></i>
+            No telemetry predictions recorded in this fleet yet.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Bottom Container Info Footer -->
+  <div class="d-flex flex-column flex-sm-row align-items-center justify-content-between pt-4 mt-4 border-top border-secondary border-opacity-25 font-mono text-secondary" style="font-size: 0.78rem;">
+    <div class="d-flex align-items-center gap-2 mb-2 mb-sm-0">
+      <span class="status-dot pulse"></span>
+      <span style="color: #cbd5e1;">Audit Logger: <strong style="color: #34d399;">Active</strong></span>
+    </div>
+    <div>
+      Total Historical Logs: <span class="fw-bold" style="color: #38bdf8;">{{ history|length }}</span>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  function filterHistory() {
+    const selectedMachine = document.getElementById('machineFilter').value;
+    const rows = document.querySelectorAll('#historyTable tbody tr:not(#emptyTableRow)');
+    let visible = 0;
+
+    rows.forEach(r => {
+      const machine = r.getAttribute('data-machine');
+      if (selectedMachine === 'all' || machine === selectedMachine) {
+        r.style.display = '';
+        visible++;
+      } else {
+        r.style.display = 'none';
+      }
+    });
+
+    document.getElementById('visibleRunsCount').innerText = visible;
+    const emptyRow = document.getElementById('emptyTableRow');
+    if (emptyRow) {
+      emptyRow.style.display = (visible === 0 && rows.length > 0) ? '' : 'none';
+    }
+  }
+
+  async function deleteHistoryRecord(id) {
+    if (!confirm(`Delete telemetry audit record #${id}?`)) return;
+    try {
+      const res = await fetch(`/api/history/${id}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const data = await res.json();
+        alert(data.detail || 'Failed to delete history record.');
+        return;
+      }
+      location.reload();
+    } catch (err) {
+      alert('Error: ' + err.message);
+    }
+  }
+
+  function exportTableToCSV() {
+    let csv = [];
+    const rows = document.querySelectorAll('#historyTable tr');
+    rows.forEach(r => {
+      const cols = r.querySelectorAll('td, th');
+      let rowData = [];
+      cols.forEach((col, idx) => {
+        if (idx < cols.length - 1) {
+          rowData.push('"' + col.innerText.replace(/"/g, '""').trim() + '"');
+        }
+      });
+      if (rowData.length > 0) {
+        csv.push(rowData.join(','));
+      }
+    });
+    const csvFile = new Blob([csv.join('\n')], { type: 'text/csv' });
+    const downloadLink = document.createElement('a');
+    downloadLink.download = 'PredictCNC_Telemetry_History.csv';
+    downloadLink.href = window.URL.createObjectURL(csvFile);
+    downloadLink.style.display = 'none';
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+    document.body.removeChild(downloadLink);
+  }
+</script>
+{% endblock %}

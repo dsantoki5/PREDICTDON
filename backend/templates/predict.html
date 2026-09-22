@@ -1,0 +1,645 @@
+{% extends "base.html" %}
+
+{% block title %}Predict Machine Condition — PredictCNC AI Engine{% endblock %}
+
+{% block content %}
+<!-- Main Glassmorphic Panel (Matching Login Page & Industrial UI) -->
+<div class="dashboard-main-card">
+
+  <!-- Header Row: Title & Action Presets -->
+  <div
+    class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 pb-4 mb-4 border-bottom border-secondary border-opacity-25">
+    <div>
+      <div class="d-flex align-items-center gap-2 mb-1">
+        <span class="badge px-2.5 py-1 rounded-pill"
+          style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4); font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.1em; font-weight: 700;">AI
+          INFERENCE ENGINE</span>
+      </div>
+      <h2 class="font-display fw-bold mb-1 tracking-tight" style="font-size: 1.95rem;">
+        <span style="color: #38bdf8;">Predict</span> <span class="text-white">Machine Condition</span>
+      </h2>
+      <p class="text-secondary mb-0 font-sans" style="font-size: 0.88rem;">
+        Enter live sensor readings manually or test presets to evaluate failure probabilities and physics-based root
+        causes.
+      </p>
+    </div>
+
+    <!-- Presets & History Quick Actions -->
+    <div class="d-flex align-items-center gap-2 flex-wrap">
+      <div class="btn-group shadow-sm" role="group"
+        style="background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(51, 65, 85, 0.8); border-radius: 10px; padding: 2px;">
+        <button type="button" class="btn btn-sm btn-cnc-outline border-0 py-1.5 px-2.5 font-mono"
+          style="font-size: 0.78rem;" onclick="applyPreset('normal')" title="Load Nominal Readings">
+          <i class="fa-solid fa-circle-check" style="color: #34d399;"></i> Normal
+        </button>
+        <button type="button" class="btn btn-sm btn-cnc-outline border-0 py-1.5 px-2.5 font-mono"
+          style="font-size: 0.78rem;" onclick="applyPreset('warning')" title="Load Anomaly Readings">
+          <i class="fa-solid fa-triangle-exclamation" style="color: #fbbf24;"></i> Warning
+        </button>
+        <button type="button" class="btn btn-sm btn-cnc-outline border-0 py-1.5 px-2.5 font-mono"
+          style="font-size: 0.78rem;" onclick="applyPreset('critical')" title="Load Failure Readings">
+          <i class="fa-solid fa-skull" style="color: #f87171;"></i> Critical
+        </button>
+      </div>
+
+      <a href="{{ url_for('history_page') }}"
+        class="btn btn-cnc-outline rounded-3 py-2 px-3 d-flex align-items-center gap-2"
+        style="border-color: rgba(51, 65, 85, 0.9); font-size: 0.82rem;" title="View History">
+        <i class="fa-solid fa-clock-rotate-left text-light"></i>
+        <span class="d-none d-sm-inline font-mono">View History</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- Main 2-Column Inference Layout -->
+  <div class="row g-4">
+
+    <!-- Left Column: Manual Telemetry Input Card (Exact Reference UI) -->
+    <div class="col-12 col-lg-5">
+      <div class="card card-cnc h-100"
+        style="background: rgba(11, 17, 32, 0.75); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 18px;">
+        <div
+          class="card-cnc-header border-bottom border-secondary border-opacity-25 p-3.5 d-flex align-items-center justify-content-between">
+          <div class="d-flex align-items-center gap-2">
+            <i class="fa-solid fa-microchip" style="color: #38bdf8;"></i>
+            <h6 class="font-display fw-bold text-white mb-0" style="font-size: 0.95rem;">Manual Telemetry Input</h6>
+          </div>
+          <span class="badge font-mono"
+            style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(51, 65, 85, 0.8); color: #94a3b8; font-size: 0.68rem; padding: 0.25rem 0.6rem; border-radius: 6px; letter-spacing: 0.04em;">
+            MODEL_TRAIN LIGHTGBM (THRESH: 0.10)
+          </span>
+        </div>
+
+        <div class="card-body p-4">
+          <form id="predictionForm" onsubmit="handlePrediction(event)">
+
+            <!-- Target Machine Selector -->
+            <div class="telemetry-form-group mb-4">
+              <label class="form-label font-mono text-secondary text-uppercase fw-bold mb-2"
+                style="font-size: 0.72rem; letter-spacing: 0.04em;">Target CNC Machine *</label>
+              {% if machines and machines|length > 0 %}
+              <select id="machineSelect" class="form-select telemetry-text-input" required
+                onchange="updateMachineInfo()">
+                {% for m in machines %}
+                <option value="{{ m.id }}" data-code="{{ m.machine_code }}" data-name="{{ m.machine_name }}"
+                  data-email="{{ m.supervisor_email or '' }}" data-sup="{{ m.supervisor_name or '' }}">
+                  {{ m.machine_code }} — {{ m.machine_name }} ({{ m.department or 'Workshop A' }})
+                </option>
+                {% endfor %}
+              </select>
+              <div id="machineInfoBanner" class="mt-2.5 p-2.5 rounded font-mono"
+                style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(51, 65, 85, 0.6); font-size: 0.74rem;">
+                <i class="fa-solid fa-envelope me-1.5" style="color: #38bdf8;"></i> Alert Supervisor: <span
+                  id="targetSupervisorEmail" class="text-white fw-bold">--</span>
+              </div>
+              {% else %}
+              <div class="p-3.5 rounded font-mono"
+                style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.4); font-size: 0.82rem;">
+                <div class="text-warning mb-2.5"><i class="fa-solid fa-triangle-exclamation me-1.5"></i> No CNC machines
+                  registered yet.</div>
+                <a href="{{ url_for('machines_page') }}" class="btn btn-sm btn-cnc-primary py-1.5 px-3"
+                  style="font-size: 0.8rem;">
+                  <i class="fa-solid fa-plus me-1.5"></i> Register Machine First
+                </a>
+              </div>
+              <select id="machineSelect" class="d-none"></select>
+              {% endif %}
+            </div>
+
+            <!-- 1. Air Temperature [K] -->
+            <div class="telemetry-form-group">
+              <div class="telemetry-input-header">
+                <div class="telemetry-field-label">
+                  <span class="telemetry-field-icon"><i class="fa-solid fa-temperature-half"
+                      style="color: #38bdf8;"></i></span>
+                  <span>Air Temperature [K]</span>
+                </div>
+                <span class="telemetry-field-unit">Kelvin [K]</span>
+              </div>
+              <input type="number" id="num_air_temp" class="telemetry-text-input" step="0.01" placeholder="e.g. 298.15"
+                required>
+            </div>
+
+            <!-- 2. Process Temperature [K] -->
+            <div class="telemetry-form-group">
+              <div class="telemetry-input-header">
+                <div class="telemetry-field-label">
+                  <span class="telemetry-field-icon"><i class="fa-solid fa-temperature-half"
+                      style="color: #f87171;"></i></span>
+                  <span>Process Temperature [K]</span>
+                </div>
+                <span class="telemetry-field-unit">Kelvin [K]</span>
+              </div>
+              <input type="number" id="num_process_temp" class="telemetry-text-input" step="0.01"
+                placeholder="e.g. 308.65" required>
+            </div>
+
+            <!-- 3. Spindle Speed [RPM] -->
+            <div class="telemetry-form-group">
+              <div class="telemetry-input-header">
+                <div class="telemetry-field-label">
+                  <span class="telemetry-field-icon"><i class="fa-solid fa-rotate" style="color: #fbbf24;"></i></span>
+                  <span>Spindle Speed [RPM]</span>
+                </div>
+                <span class="telemetry-field-unit">Revolutions/min</span>
+              </div>
+              <input type="number" id="num_rotational_speed" class="telemetry-text-input" step="1"
+                placeholder="e.g. 1500" required>
+            </div>
+
+            <!-- 4. Cutting Torque [Nm] -->
+            <div class="telemetry-form-group">
+              <div class="telemetry-input-header">
+                <div class="telemetry-field-label">
+                  <span class="telemetry-field-icon"><i class="fa-solid fa-bolt" style="color: #38bdf8;"></i></span>
+                  <span>Cutting Torque [Nm]</span>
+                </div>
+                <span class="telemetry-field-unit">Newton-meters [Nm]</span>
+              </div>
+              <input type="number" id="num_torque" class="telemetry-text-input" step="0.1" placeholder="e.g. 40.0"
+                required>
+            </div>
+
+            <!-- 5. Tool Wear [Minutes] -->
+            <div class="telemetry-form-group mb-4">
+              <div class="telemetry-input-header">
+                <div class="telemetry-field-label">
+                  <span class="telemetry-field-icon"><i class="fa-solid fa-clock" style="color: #c084fc;"></i></span>
+                  <span>Tool Wear [Minutes]</span>
+                </div>
+                <span class="telemetry-field-unit">Cumulative min</span>
+              </div>
+              <input type="number" id="num_tool_wear" class="telemetry-text-input" step="1" placeholder="e.g. 80"
+                required>
+            </div>
+
+            <!-- Submit Button (Matching Reference) -->
+            <button type="submit" id="submitBtn" class="btn-login-submit mt-2 py-2.5">
+              <i class="fa-solid fa-wand-magic-sparkles" style="color: #ffffff; font-size: 0.92rem;"></i>
+              <span>Execute Failure Prediction</span>
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column: AI Prediction Output Card -->
+    <div class="col-12 col-lg-7">
+
+      <!-- State A: Placeholder / Initial Ready State -->
+      <div id="placeholderResult"
+        class="card card-cnc h-100 d-flex flex-column align-items-center justify-content-center p-4 p-md-5 text-center"
+        style="background: rgba(11, 17, 32, 0.75); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 18px; min-height: 520px;">
+        <div class="brand-icon mx-auto p-4 mb-3"
+          style="width: 84px; height: 84px; border-radius: 22px; font-size: 2.6rem; background: rgba(30, 58, 138, 0.35); border: 1px solid rgba(56, 189, 248, 0.45); box-shadow: 0 0 30px rgba(56, 189, 248, 0.3);">
+          <i class="fa-solid fa-microchip" style="color: #38bdf8;"></i>
+        </div>
+        <h4 class="font-display fw-bold text-white mb-2">Awaiting Sensor Telemetry</h4>
+        <p class="text-secondary font-sans mb-4" style="max-width: 440px; font-size: 0.88rem;">
+          Configure your sensor parameters on the left and click <strong class="text-info">"Execute Failure
+            Prediction"</strong> to view real-time diagnostics, failure probability, and root cause analysis.
+        </p>
+
+        <!-- 4 Feature Highlight Cards (Matching Screenshot) -->
+        <div class="row g-2.5 w-100 text-start mt-2">
+          <div class="col-6 col-sm-3">
+            <div class="p-3 rounded-3 h-100"
+              style="background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(51, 65, 85, 0.7);">
+              <i class="fa-solid fa-chart-line mb-2 d-block" style="color: #38bdf8; font-size: 1.1rem;"></i>
+              <div class="font-display fw-bold text-white" style="font-size: 0.78rem;">Failure Probability</div>
+              <div class="text-secondary font-sans" style="font-size: 0.68rem;">AI-powered risk estimation</div>
+            </div>
+          </div>
+          <div class="col-6 col-sm-3">
+            <div class="p-3 rounded-3 h-100"
+              style="background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(51, 65, 85, 0.7);">
+              <i class="fa-solid fa-microscope mb-2 d-block" style="color: #38bdf8; font-size: 1.1rem;"></i>
+              <div class="font-display fw-bold text-white" style="font-size: 0.78rem;">Root Cause Analysis</div>
+              <div class="text-secondary font-sans" style="font-size: 0.68rem;">Physics-based diagnosis</div>
+            </div>
+          </div>
+          <div class="col-6 col-sm-3">
+            <div class="p-3 rounded-3 h-100"
+              style="background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(51, 65, 85, 0.7);">
+              <i class="fa-solid fa-list-check mb-2 d-block" style="color: #38bdf8; font-size: 1.1rem;"></i>
+              <div class="font-display fw-bold text-white" style="font-size: 0.78rem;">Maintenance Plan</div>
+              <div class="text-secondary font-sans" style="font-size: 0.68rem;">Actionable work order</div>
+            </div>
+          </div>
+          <div class="col-6 col-sm-3">
+            <div class="p-3 rounded-3 h-100"
+              style="background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(51, 65, 85, 0.7);">
+              <i class="fa-solid fa-shield-halved mb-2 d-block" style="color: #38bdf8; font-size: 1.1rem;"></i>
+              <div class="font-display fw-bold text-white" style="font-size: 0.78rem;">Improve Uptime</div>
+              <div class="text-secondary font-sans" style="font-size: 0.68rem;">Reliable operations</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- State B: Active Prediction Diagnostic Results -->
+      <div id="activeResultCard" class="card card-cnc h-100 d-none"
+        style="background: rgba(11, 17, 32, 0.75); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 18px;">
+        <div class="card-cnc-header border-bottom border-secondary border-opacity-25 p-3.5 d-flex align-items-center justify-content-between">
+          <div class="d-flex align-items-center gap-2">
+            <i class="fa-solid fa-microchip" style="color: #38bdf8;"></i>
+            <h6 class="font-display fw-bold text-white mb-0" style="font-size: 0.95rem;">AI Diagnostic Evaluation</h6>
+          </div>
+          <div class="d-flex align-items-center gap-2">
+            <span class="badge font-mono" style="background: rgba(56, 189, 248, 0.12); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.35); font-size: 0.65rem;">
+              LIGHTGBM 44-FEAT ENGINE
+            </span>
+          </div>
+        </div>
+
+        <div class="card-body p-4">
+
+          <!-- 1. Result Status & Health Score Banner -->
+          <div id="statusBanner" class="p-3.5 rounded-3 mb-3.5 d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-3">
+            <div>
+              <div id="statusLabel" class="font-display fs-4 fw-bold d-flex align-items-center gap-2">--</div>
+              <div id="predictionSubtext" class="text-secondary font-sans mt-1" style="font-size: 0.85rem; line-height: 1.4;">--</div>
+            </div>
+            <div class="text-sm-end flex-shrink-0">
+              <div class="font-mono text-secondary text-uppercase" style="font-size: 0.7rem; letter-spacing: 0.05em;">Machine Health</div>
+              <div id="healthScoreDisplay" class="font-mono fs-2 fw-bold" style="line-height: 1.1;">--%</div>
+            </div>
+          </div>
+
+          <!-- 2. Failure Probability Risk Meter -->
+          <div class="p-3 rounded-3 mb-3.5" style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(51, 65, 85, 0.7);">
+            <div class="d-flex justify-content-between font-mono small text-secondary mb-1.5" style="font-size: 0.75rem;">
+              <span><i class="fa-solid fa-gauge-high me-1 text-info"></i> Failure Probability Risk Index</span>
+              <span id="failureProbDisplay" class="fw-bold text-white font-mono">0.0%</span>
+            </div>
+            <div class="progress" style="height: 9px; background-color: rgba(3, 7, 18, 0.9); border-radius: 9999px;">
+              <div id="probBar" class="progress-bar" role="progressbar" style="width: 0%; border-radius: 9999px; transition: width 0.6s ease;"></div>
+            </div>
+          </div>
+
+          <!-- 3. Physical Telemetry Snapshot (4 Mini KPIs) -->
+          <div class="row g-2.5 mb-3.5">
+            <div class="col-6 col-md-3">
+              <div class="p-2.5 rounded-3 h-100" style="background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(51, 65, 85, 0.6);">
+                <div class="text-secondary font-mono text-uppercase" style="font-size: 0.65rem;">Thermal Gradient</div>
+                <div id="diag_delta_t" class="font-mono text-white fw-bold fs-6 mt-0.5">-- K</div>
+                <div class="text-secondary font-mono" style="font-size: 0.62rem;">ΔT (Proc - Air)</div>
+              </div>
+            </div>
+            <div class="col-6 col-md-3">
+              <div class="p-2.5 rounded-3 h-100" style="background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(51, 65, 85, 0.6);">
+                <div class="text-secondary font-mono text-uppercase" style="font-size: 0.65rem;">Spindle Power</div>
+                <div id="diag_power" class="font-mono text-white fw-bold fs-6 mt-0.5">-- kW</div>
+                <div class="text-secondary font-mono" style="font-size: 0.62rem;">Mechanical load</div>
+              </div>
+            </div>
+            <div class="col-6 col-md-3">
+              <div class="p-2.5 rounded-3 h-100" style="background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(51, 65, 85, 0.6);">
+                <div class="text-secondary font-mono text-uppercase" style="font-size: 0.65rem;">Torque Load</div>
+                <div id="diag_torque" class="font-mono text-white fw-bold fs-6 mt-0.5">-- Nm</div>
+                <div class="text-secondary font-mono" style="font-size: 0.62rem;">Cutter resistance</div>
+              </div>
+            </div>
+            <div class="col-6 col-md-3">
+              <div class="p-2.5 rounded-3 h-100" style="background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(51, 65, 85, 0.6);">
+                <div class="text-secondary font-mono text-uppercase" style="font-size: 0.65rem;">Tool Lifespan</div>
+                <div id="diag_tool_wear" class="font-mono text-white fw-bold fs-6 mt-0.5">-- min</div>
+                <div id="diag_tool_condition" class="text-secondary font-mono" style="font-size: 0.62rem;">Flank wear state</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 4. Gmail SMTP Alert Dispatch Status Banner -->
+          <div id="emailNotificationBanner" class="p-3 rounded-3 mb-3.5 d-flex align-items-center gap-3 border shadow-sm font-mono"
+            style="background: rgba(15, 23, 42, 0.85); border-color: rgba(51, 65, 85, 0.8) !important;">
+            <i id="emailBannerIcon" class="fa-solid fa-envelope fs-4" style="color: #38bdf8;"></i>
+            <div>
+              <div id="emailBannerTitle" class="fw-bold font-display text-white" style="font-size: 0.86rem;">--</div>
+              <div id="emailBannerMsg" class="text-secondary" style="font-size: 0.74rem;">--</div>
+            </div>
+          </div>
+
+          <!-- 5. Sensor Boundary Telemetry Verification Table -->
+          <div class="mb-3.5">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <div class="font-mono text-white fw-bold text-uppercase" style="font-size: 0.76rem; letter-spacing: 0.05em;">
+                <i class="fa-solid fa-microscope me-1.5" style="color: #38bdf8;"></i> Sensor Boundary Telemetry Verification
+              </div>
+              <span class="badge font-mono" style="background: rgba(15, 23, 42, 0.9); border: 1px solid rgba(51, 65, 85, 0.7); color: #94a3b8; font-size: 0.65rem;">PHYSICAL LIMITS</span>
+            </div>
+            <div class="table-responsive" style="border-radius: 10px; border: 1px solid rgba(51, 65, 85, 0.8); background: rgba(7, 13, 31, 0.9);">
+              <table class="table-cnc mb-0">
+                <thead>
+                  <tr>
+                    <th>Parameter</th>
+                    <th>Observed</th>
+                    <th>Nominal Envelope</th>
+                    <th>Status</th>
+                    <th>Physical Impact</th>
+                  </tr>
+                </thead>
+                <tbody id="rcaTableBody">
+                  <!-- Dynamically populated from analysis_table -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- 6. Root Cause Diagnostics & Affected Components -->
+          <div id="rcaDetailsSection" class="p-3 rounded-3 mb-3.5" style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(51, 65, 85, 0.75);">
+            <div class="d-flex align-items-center gap-2 mb-2 font-display fw-bold text-white" style="font-size: 0.82rem;">
+              <i class="fa-solid fa-triangle-exclamation" style="color: #fbbf24;"></i>
+              <span>Root Cause & Affected Machine Subsystems</span>
+            </div>
+            <div id="affectedComponentsList" class="d-flex flex-wrap gap-1.5 mb-2">
+              <!-- Dynamically populated component pills -->
+            </div>
+            <div id="rootCauseText" class="text-secondary font-mono" style="font-size: 0.74rem;">
+              <!-- Dynamically populated cause explanation -->
+            </div>
+          </div>
+
+          <!-- 7. Recommended Actionable Maintenance Checklist -->
+          <div class="p-3.5 rounded-3 mb-3.5" style="background-color: rgba(15, 23, 42, 0.85); border: 1px solid rgba(51, 65, 85, 0.75);">
+            <div class="fw-bold text-white small mb-2 font-display d-flex align-items-center justify-content-between">
+              <div class="d-flex align-items-center gap-2">
+                <i class="fa-solid fa-list-check" style="color: #34d399;"></i>
+                <span>Actionable Maintenance Work Order Tasks</span>
+              </div>
+              <a href="{{ url_for('maintenance_page') }}" class="font-mono text-info text-decoration-none" style="font-size: 0.72rem;">
+                Go to Work Orders <i class="fa-solid fa-arrow-right ms-1"></i>
+              </a>
+            </div>
+            <ul id="maintenanceList" class="mb-0 text-secondary ps-3 font-mono" style="font-size: 0.76rem; line-height: 1.6;">
+              <!-- Dynamically populated -->
+            </ul>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Container Info Footer -->
+  <div
+    class="d-flex flex-column flex-sm-row align-items-center justify-content-between pt-4 mt-4 border-top border-secondary border-opacity-25 font-mono text-secondary"
+    style="font-size: 0.78rem;">
+    <div class="d-flex align-items-center gap-2 mb-2 mb-sm-0">
+      <span class="status-dot pulse"></span>
+      <span style="color: #cbd5e1;">AI Inference Engine: <strong style="color: #34d399;">Ready (LightGBM v4.2)</strong></span>
+    </div>
+    <div>
+      Protocol: <span class="fw-bold" style="color: #38bdf8;">Gmail SMTP + 44-Feat Physics</span>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  function updateMachineInfo() {
+    const sel = document.getElementById('machineSelect');
+    if (!sel || !sel.options || !sel.options.length) return;
+    const opt = sel.options[sel.selectedIndex];
+    if (!opt) return;
+    const email = opt.getAttribute('data-email') || 'supervisor@predictcnc.local';
+    const supName = opt.getAttribute('data-sup') || 'Machine Supervisor';
+    const emailEl = document.getElementById('targetSupervisorEmail');
+    if (emailEl) {
+      emailEl.innerText = `${supName} <${email}>`;
+    }
+  }
+
+  function applyPreset(type) {
+    if (type === 'normal') {
+      document.getElementById('num_air_temp').value = 298.15;
+      document.getElementById('num_process_temp').value = 308.65;
+      document.getElementById('num_rotational_speed').value = 1500;
+      document.getElementById('num_torque').value = 40.0;
+      document.getElementById('num_tool_wear').value = 45;
+    } else if (type === 'warning') {
+      document.getElementById('num_air_temp').value = 298.50;
+      document.getElementById('num_process_temp').value = 309.00;
+      document.getElementById('num_rotational_speed').value = 1741;
+      document.getElementById('num_torque').value = 28.0;
+      document.getElementById('num_tool_wear').value = 155;
+    } else if (type === 'critical') {
+      document.getElementById('num_air_temp').value = 304.00;
+      document.getElementById('num_process_temp').value = 314.50;
+      document.getElementById('num_rotational_speed').value = 1200;
+      document.getElementById('num_torque').value = 75.0;
+      document.getElementById('num_tool_wear').value = 240;
+    }
+  }
+
+  async function handlePrediction(e) {
+    e.preventDefault();
+    const machineSelect = document.getElementById('machineSelect');
+    const machineId = machineSelect ? parseInt(machineSelect.value) : NaN;
+    if (!machineId || isNaN(machineId)) {
+      alert('No CNC machine selected. Please register a machine in your fleet first.');
+      return;
+    }
+
+    const airTemp = parseFloat(document.getElementById('num_air_temp').value);
+    const procTemp = parseFloat(document.getElementById('num_process_temp').value);
+    const rpm = parseFloat(document.getElementById('num_rotational_speed').value);
+    const torque = parseFloat(document.getElementById('num_torque').value);
+    const toolWear = parseFloat(document.getElementById('num_tool_wear').value);
+
+    if (isNaN(airTemp) || isNaN(procTemp) || isNaN(rpm) || isNaN(torque) || isNaN(toolWear)) {
+      alert('Please fill in all 5 telemetry parameters or choose a preset (Normal, Warning, Critical) to execute failure prediction.');
+      return;
+    }
+
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processing LightGBM Telemetry...';
+
+    const payload = {
+      machine_id: machineId,
+      air_temperature: airTemp,
+      process_temperature: procTemp,
+      rotational_speed: rpm,
+      torque: torque,
+      tool_wear: toolWear
+    };
+
+    try {
+      const response = await fetch('/api/predict', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        alert(data.detail || 'Prediction failed.');
+        return;
+      }
+
+      displayPredictionResult(data, payload);
+    } catch (err) {
+      alert('Prediction error: ' + err.message);
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles" style="color: #ffffff; font-size: 0.92rem;"></i> <span>Execute Failure Prediction</span>';
+    }
+  }
+
+  function displayPredictionResult(data, inputs) {
+    document.getElementById('placeholderResult').classList.add('d-none');
+    const resCard = document.getElementById('activeResultCard');
+    resCard.classList.remove('d-none');
+
+    const banner = document.getElementById('statusBanner');
+    const label = document.getElementById('statusLabel');
+    const subtext = document.getElementById('predictionSubtext');
+    const score = document.getElementById('healthScoreDisplay');
+    const probBar = document.getElementById('probBar');
+    const probDisp = document.getElementById('failureProbDisplay');
+
+    score.innerText = data.machine_health + '%';
+    probDisp.innerText = data.failure_probability + '%';
+    probBar.style.width = data.failure_probability + '%';
+
+    // Update Mini Physical KPIs
+    const deltaT = (inputs.process_temperature - inputs.air_temperature).toFixed(1);
+    document.getElementById('diag_delta_t').innerText = `${deltaT} K`;
+    const powerKw = ((2 * Math.PI * inputs.rotational_speed * inputs.torque) / 60000).toFixed(2);
+    document.getElementById('diag_power').innerText = `${powerKw} kW`;
+    document.getElementById('diag_torque').innerText = `${inputs.torque.toFixed(1)} Nm`;
+    document.getElementById('diag_tool_wear').innerText = `${inputs.tool_wear} min`;
+    const toolCond = document.getElementById('diag_tool_condition');
+    if (inputs.tool_wear >= 200) {
+      toolCond.innerText = 'Critical Breakage Risk';
+      toolCond.style.color = '#f87171';
+    } else if (inputs.tool_wear >= 140) {
+      toolCond.innerText = 'Degraded Flank';
+      toolCond.style.color = '#fbbf24';
+    } else {
+      toolCond.innerText = 'Nominal Edge';
+      toolCond.style.color = '#34d399';
+    }
+
+    if (data.is_failure || data.predicted_class === 2) {
+      banner.style.background = 'linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(15, 23, 42, 0.95) 100%)';
+      banner.style.border = '1px solid rgba(239, 68, 68, 0.5)';
+      label.innerHTML = '<i class="fa-solid fa-skull" style="color: #f87171;"></i> <span class="text-white">CRITICAL MACHINE FAILURE</span>';
+      subtext.innerText = data.root_cause_analysis?.diagnosis || 'High probability of imminent tool breakdown. Immediate maintenance required.';
+      score.style.color = '#f87171';
+      probBar.style.background = 'linear-gradient(90deg, #f59e0b, #ef4444)';
+      probBar.style.boxShadow = '0 0 12px #ef4444';
+    } else if (data.is_warning || data.predicted_class === 1 || data.failure_probability > 35.0) {
+      banner.style.background = 'linear-gradient(135deg, rgba(245, 158, 11, 0.18) 0%, rgba(15, 23, 42, 0.95) 100%)';
+      banner.style.border = '1px solid rgba(245, 158, 11, 0.45)';
+      label.innerHTML = '<i class="fa-solid fa-triangle-exclamation" style="color: #fbbf24;"></i> <span class="text-white">ANOMALY DRIFT DETECTED</span>';
+      subtext.innerText = data.root_cause_analysis?.diagnosis || 'Operating outside nominal envelope. Inspection work order dispatched.';
+      score.style.color = '#fbbf24';
+      probBar.style.background = 'linear-gradient(90deg, #10b981, #f59e0b)';
+      probBar.style.boxShadow = '0 0 12px #f59e0b';
+    } else {
+      banner.style.background = 'linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(15, 23, 42, 0.95) 100%)';
+      banner.style.border = '1px solid rgba(16, 185, 129, 0.4)';
+      label.innerHTML = '<i class="fa-solid fa-circle-check" style="color: #34d399;"></i> <span class="text-white">NOMINAL HEALTH REGIME</span>';
+      subtext.innerText = data.root_cause_analysis?.diagnosis || 'All physical parameters operating safely within nominal industrial tolerances.';
+      score.style.color = '#34d399';
+      probBar.style.background = 'linear-gradient(90deg, #38bdf8, #10b981)';
+      probBar.style.boxShadow = '0 0 12px #10b981';
+    }
+
+    // Gmail SMTP Banner
+    const notif = data.notification || {};
+    const nBanner = document.getElementById('emailNotificationBanner');
+    const nIcon = document.getElementById('emailBannerIcon');
+    const nTitle = document.getElementById('emailBannerTitle');
+    const nMsg = document.getElementById('emailBannerMsg');
+
+    if (notif.status === 'sent') {
+      nBanner.style.background = 'rgba(16, 185, 129, 0.12)';
+      nBanner.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+      nIcon.className = 'fa-solid fa-circle-check fs-4 text-success';
+      nTitle.innerText = `Automated ${notif.alert_type} Alert Delivered`;
+      nMsg.innerText = `Delivered via Gmail SMTP to supervisor (${notif.recipient}) with complete physical diagnostics.`;
+    } else if (notif.status === 'duplicate_suppressed') {
+      nBanner.style.background = 'rgba(245, 158, 11, 0.12)';
+      nBanner.style.borderColor = 'rgba(245, 158, 11, 0.4)';
+      nIcon.className = 'fa-solid fa-clock-rotate-left fs-4 text-warning';
+      nTitle.innerText = 'Alert Cooldown Active';
+      nMsg.innerText = notif.message || 'Duplicate alert suppressed to avoid inbox flooding.';
+    } else if (notif.status === 'skipped_healthy') {
+      nBanner.style.background = 'rgba(15, 23, 42, 0.85)';
+      nBanner.style.borderColor = 'rgba(51, 65, 85, 0.8)';
+      nIcon.className = 'fa-solid fa-envelope fs-4 text-info';
+      nTitle.innerText = 'Nominal Operation — No Alert Necessary';
+      nMsg.innerText = 'System operating safely within bounds; alert dispatcher idling.';
+    } else {
+      nBanner.style.background = 'rgba(239, 68, 68, 0.12)';
+      nBanner.style.borderColor = 'rgba(239, 68, 68, 0.4)';
+      nIcon.className = 'fa-solid fa-circle-xmark fs-4 text-danger';
+      nTitle.innerText = 'Email Dispatch Notice';
+      nMsg.innerText = notif.message || 'Alert failed or SMTP not configured.';
+    }
+
+    // Sensor Boundary RCA Table (Using analysis_table)
+    const rca = data.root_cause_analysis || {};
+    const tableData = rca.analysis_table || [];
+    const tbody = document.getElementById('rcaTableBody');
+    tbody.innerHTML = '';
+
+    if (tableData.length > 0) {
+      tableData.forEach(c => {
+        const isNom = c.status === 'Normal' || c.status === 'Healthy';
+        const isCrit = c.status === 'Critical';
+        let statusBadge = `<span class="badge-status-pill badge-status-completed"><span class="status-bullet">●</span> Normal</span>`;
+        if (isCrit) {
+          statusBadge = `<span class="badge-priority badge-priority-critical"><i class="fa-solid fa-skull"></i> Critical</span>`;
+        } else if (!isNom) {
+          statusBadge = `<span class="badge-status-pill badge-status-pending"><span class="status-bullet">●</span> Abnormal</span>`;
+        }
+
+        const row = `
+          <tr>
+            <td class="font-mono text-light fw-semibold" style="font-size: 0.82rem;">${c.parameter}</td>
+            <td class="font-mono text-white fw-bold" style="font-size: 0.82rem;">${c.current || c.observed}</td>
+            <td class="font-mono text-secondary small">${c.normal || c.nominal_envelope}</td>
+            <td>${statusBadge}</td>
+            <td class="font-sans text-secondary" style="font-size: 0.78rem;">${c.effect || 'Nominal performance'}</td>
+          </tr>
+        `;
+        tbody.insertAdjacentHTML('beforeend', row);
+      });
+    } else {
+      tbody.innerHTML = `<tr><td colspan="5" class="text-center py-3 text-secondary font-mono">All telemetry parameters within normal operational baseline.</td></tr>`;
+    }
+
+    // Affected Components & Causes
+    const compContainer = document.getElementById('affectedComponentsList');
+    compContainer.innerHTML = '';
+    const comps = rca.components || ['Drive Spindle', 'Coolant Assembly'];
+    comps.forEach(comp => {
+      compContainer.insertAdjacentHTML('beforeend', `
+        <span class="badge px-2 py-1 font-mono" style="background: rgba(56, 189, 248, 0.12); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); font-size: 0.72rem;">
+          <i class="fa-solid fa-gear me-1"></i> ${comp}
+        </span>
+      `);
+    });
+
+    const causes = rca.causes || [];
+    document.getElementById('rootCauseText').innerText = causes.length > 0 ? causes.join(' • ') : 'No severe mechanical root cause triggers detected.';
+
+    // Maintenance Checklist
+    const recs = rca.maintenance || ['Maintain standard preventative lubrication schedule.', 'Log periodic visual inspections.'];
+    const mList = document.getElementById('maintenanceList');
+    mList.innerHTML = '';
+    recs.forEach(r => {
+      mList.insertAdjacentHTML('beforeend', `<li class="mb-1.5"><i class="fa-solid fa-wrench me-1.5 text-warning" style="font-size: 0.7rem;"></i> ${r}</li>`);
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    updateMachineInfo();
+  });
+</script>
+{% endblock %}

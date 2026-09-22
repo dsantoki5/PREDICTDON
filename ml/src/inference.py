@@ -13,7 +13,7 @@ from ml.src.feature_engineering import engineer_features_44, create_feature_data
 # Authoritative class labels
 CLASS_LABELS = {
     0: "Normal Operation",
-    1: "Degraded / Thermal-Mechanical Anomaly",
+    1: "Warning / Anomaly Alert",
     2: "Critical Machine Failure"
 }
 
@@ -97,7 +97,7 @@ class Predictor:
             risk_level = "High"
             suggested_status = "Critical"
         elif is_warning or failure_prob > 25.0:
-            prediction_label = "Degraded / Anomaly Alert"
+            prediction_label = "Warning / Anomaly Alert"
             risk_level = "Medium"
             suggested_status = "Warning"
         else:

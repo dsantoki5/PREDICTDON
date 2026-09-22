@@ -1,0 +1,674 @@
+{% extends "base.html" %}
+
+{% block title %}Sign In — PredictCNC AI Maintenance{% endblock %}
+
+{% block auth_content %}
+<div class="login-screen-root">
+  <!-- Background Image with Dark Vignette & Industrial Overlay -->
+  <div class="login-bg-image"></div>
+  <div class="login-bg-gradient"></div>
+  <div class="login-bg-radial"></div>
+
+  <!-- Main Container Layout (3 Columns) -->
+  <div class="login-content-wrapper">
+    <div class="row align-items-center g-4 g-lg-5">
+
+      <!-- LEFT COLUMN: Features & System Badges (Visible on lg screens) -->
+      <div class="col-lg-3 d-none d-lg-flex flex-column justify-content-between" style="min-height: 480px;">
+        <!-- Feature List -->
+        <div class="d-flex flex-column gap-4 pt-2">
+          <div class="login-feature-item">
+            <div class="login-feature-icon">
+              <i class="fa-solid fa-microchip"></i>
+            </div>
+            <div>
+              <div class="login-feature-title">Predict</div>
+              <div class="login-feature-sub">Failures Early</div>
+            </div>
+          </div>
+
+          <div class="login-feature-item">
+            <div class="login-feature-icon">
+              <i class="fa-solid fa-chart-column"></i>
+            </div>
+            <div>
+              <div class="login-feature-title">Reduce</div>
+              <div class="login-feature-sub">Downtime</div>
+            </div>
+          </div>
+
+          <div class="login-feature-item">
+            <div class="login-feature-icon">
+              <i class="fa-solid fa-shield-halved"></i>
+            </div>
+            <div>
+              <div class="login-feature-title">Increase</div>
+              <div class="login-feature-sub">Productivity</div>
+            </div>
+          </div>
+
+          <div class="login-feature-item">
+            <div class="login-feature-icon">
+              <i class="fa-solid fa-leaf"></i>
+            </div>
+            <div>
+              <div class="login-feature-title">Sustainable</div>
+              <div class="login-feature-sub">Operations</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bottom Left Branding -->
+        <div class="pt-4 border-top border-secondary border-opacity-25">
+          <div style="height: 2px; width: 28px; background: #38bdf8; border-radius: 9999px; margin-bottom: 0.75rem; box-shadow: 0 0 8px rgba(56,189,248,0.5);"></div>
+          <div class="font-mono text-uppercase text-secondary" style="font-size: 0.65rem; letter-spacing: 0.15em;">CNC | AI | RELIABILITY</div>
+          <div class="font-mono fw-bold text-light" style="font-size: 0.8rem; letter-spacing: 0.1em;">PREDICTCNC</div>
+        </div>
+      </div>
+
+      <!-- CENTER COLUMN: Main Glassmorphic Auth Card -->
+      <div class="col-12 col-md-10 col-lg-6 mx-auto">
+        <div class="login-glass-card">
+          
+          <!-- Card Header: Logo + Right Subsystem Tagline -->
+          <div class="d-flex align-items-center justify-content-between border-bottom border-secondary border-opacity-25 pb-4 mb-4">
+            <!-- Brand Logo & Name -->
+            <div class="d-flex align-items-center gap-3">
+              <div class="d-flex align-items-center justify-content-center flex-shrink-0" style="width: 48px; height: 48px;">
+                <img src="{{ url_for('static', filename='img/logo.png') }}" alt="PredictCNC Logo" style="height: 42px; width: 42px; object-fit: contain; filter: drop-shadow(0 0 10px rgba(56, 189, 248, 0.45));">
+              </div>
+              <div>
+                <div class="font-display fw-bold text-white fs-4 d-flex align-items-center gap-1" style="letter-spacing: -0.02em;">
+                  Predict<span style="color: #38bdf8;">CNC</span>
+                </div>
+                <div class="font-mono text-secondary text-uppercase" style="font-size: 0.6rem; letter-spacing: 0.14em;">
+                  AI-BASED PREDICTIVE MAINTENANCE
+                </div>
+              </div>
+            </div>
+
+            <!-- Right Tagline -->
+            <div class="border-start border-secondary border-opacity-25 ps-3 text-end font-mono" style="font-size: 0.6rem; letter-spacing: 0.12em; line-height: 1.45; color: #94a3b8;">
+              <div>SMART</div>
+              <div>MACHINES</div>
+              <div>RELIABLE</div>
+              <div class="fw-bold" style="color: #38bdf8;">TOMORROW</div>
+            </div>
+          </div>
+
+          <!-- Notification Banner (Alerts) -->
+          <div id="authAlertBox" class="d-none p-3 mb-3 rounded-3 font-mono text-xs align-items-center gap-2"></div>
+
+          <!-- Mode Switcher Tabs -->
+          <div id="tabsHeaderContainer" class="mb-4">
+            <div class="login-tabs-container">
+              <button type="button" class="login-tab-btn active" id="tabBtnSignIn" onclick="switchAuthMode('login')">
+                Sign In
+              </button>
+              <button type="button" class="login-tab-btn" id="tabBtnRegister" onclick="switchAuthMode('register')">
+                Register Operator
+              </button>
+            </div>
+          </div>
+
+          <!-- Forgot Password Header Banner (shown only when in forgot mode) -->
+          <div id="forgotHeaderBanner" class="auth-forgot-banner mb-4 p-2 px-3 rounded-3 d-none">
+            <div class="d-flex align-items-center gap-2 text-info font-mono small fw-bold">
+              <i class="fa-solid fa-key"></i>
+              <span>Password Recovery</span>
+            </div>
+            <button type="button" class="btn btn-sm btn-link text-secondary text-decoration-none font-mono" style="font-size: 0.72rem;" onclick="switchAuthMode('login')">
+              <i class="fa-solid fa-arrow-left me-1"></i> Back to Sign In
+            </button>
+          </div>
+
+          <!-- ========================================== -->
+          <!-- FORM 1: SIGN IN MODE (Default Active)      -->
+          <!-- ========================================== -->
+          <form id="formSignIn" method="POST" action="{{ url_for('login_page') }}" class="auth-form-panel">
+            <!-- Company Name (Optional) -->
+            <div>
+              <label class="form-label font-sans text-light small mb-1.5 fw-medium">Company Name</label>
+              <div class="login-input-group">
+                <i class="fa-solid fa-building login-input-icon"></i>
+                <input type="text" name="company_name" id="loginCompany" class="form-control login-form-input" placeholder="Enter your company name">
+              </div>
+            </div>
+
+            <!-- Username or Email -->
+            <div>
+              <label class="form-label font-sans text-light small mb-1.5 fw-medium">Username or Email *</label>
+              <div class="login-input-group">
+                <i class="fa-solid fa-user login-input-icon"></i>
+                <input type="text" name="username" id="loginUsername" class="form-control login-form-input" placeholder="Enter your username or email" value="admin" required autofocus>
+              </div>
+            </div>
+
+            <!-- Password with Eye Toggle -->
+            <div>
+              <label class="form-label font-sans text-light small mb-1.5 fw-medium">Password *</label>
+              <div class="login-input-group">
+                <i class="fa-solid fa-lock login-input-icon"></i>
+                <input type="password" name="password" id="loginPassword" class="form-control login-form-input pe-5" placeholder="Enter your password" value="admin123" required>
+                <button type="button" class="login-pwd-toggle" onclick="togglePasswordVisibility('loginPassword', 'loginEyeIcon')">
+                  <i class="fa-solid fa-eye" id="loginEyeIcon"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- Remember Me & Forgot Password -->
+            <div class="d-flex align-items-center justify-content-between pt-1">
+              <div class="form-check m-0">
+                <input class="form-check-input bg-dark border-secondary cursor-pointer" type="checkbox" id="rememberMeCheckbox">
+                <label class="form-check-label text-secondary font-mono small cursor-pointer" for="rememberMeCheckbox">
+                  Remember me
+                </label>
+              </div>
+              <a href="javascript:void(0)" onclick="switchAuthMode('forgot')" class="text-info font-mono small text-decoration-none">
+                Forgot password?
+              </a>
+            </div>
+
+            <!-- Submit Action Button -->
+            <button type="submit" id="btnSignInSubmit" class="btn-login-submit mt-2">
+              <span>Authenticate & Access Fleet</span>
+              <i class="fa-solid fa-arrow-right"></i>
+            </button>
+          </form>
+
+          <!-- ========================================== -->
+          <!-- FORM 2: REGISTER OPERATOR MODE (Hidden)    -->
+          <!-- ========================================== -->
+          <form id="formRegister" class="auth-form-panel d-none">
+            <!-- 1. Company Name -->
+            <div>
+              <label class="form-label font-sans text-light small mb-1 fw-medium">Company Name *</label>
+              <div class="login-input-group">
+                <i class="fa-solid fa-building login-input-icon"></i>
+                <input type="text" id="regCompany" class="form-control login-form-input" placeholder="Enter company name" required>
+              </div>
+            </div>
+
+            <!-- 2. Admin Name & 3. Username -->
+            <div class="row g-2">
+              <div class="col-6">
+                <label class="form-label font-sans text-light small mb-1 fw-medium">Admin Name *</label>
+                <input type="text" id="regAdminName" class="form-control login-form-input ps-3" placeholder="Enter admin name" required>
+              </div>
+              <div class="col-6">
+                <label class="form-label font-sans text-light small mb-1 fw-medium">Username *</label>
+                <input type="text" id="regUsername" class="form-control login-form-input ps-3" placeholder="Enter username" required>
+              </div>
+            </div>
+
+            <!-- 4. Email Address with Typo Detection -->
+            <div>
+              <div class="d-flex align-items-center justify-content-between mb-1">
+                <label class="form-label font-sans text-light small m-0 fw-medium">Email Address *</label>
+                <span id="emailTypoBadge" class="font-mono text-xs" style="font-size: 0.68rem;"></span>
+              </div>
+              <div class="login-input-group">
+                <i class="fa-solid fa-envelope login-input-icon"></i>
+                <input type="email" id="regEmail" class="form-control login-form-input" placeholder="operator@company.com" required oninput="validateEmailField(this.value)">
+              </div>
+            </div>
+
+            <!-- 5. Password & 6. Confirm Password -->
+            <div class="row g-2">
+              <div class="col-6">
+                <label class="form-label font-sans text-light small mb-1 fw-medium">Password *</label>
+                <div class="login-input-group">
+                  <input type="password" id="regPassword" class="form-control login-form-input ps-3 pe-4" placeholder="Enter password" required oninput="checkRegPasswordComplexity(this.value)">
+                  <button type="button" class="login-pwd-toggle" style="right: 8px;" onclick="togglePasswordVisibility('regPassword', 'regEyeIcon1')">
+                    <i class="fa-solid fa-eye" id="regEyeIcon1" style="font-size: 0.75rem;"></i>
+                  </button>
+                </div>
+              </div>
+              <div class="col-6">
+                <div class="d-flex align-items-center justify-content-between mb-1">
+                  <label class="form-label font-sans text-light small m-0 fw-medium">Confirm Pass *</label>
+                  <span id="confirmPassBadge" class="font-mono" style="font-size: 0.65rem;"></span>
+                </div>
+                <div class="login-input-group">
+                  <input type="password" id="regConfirmPassword" class="form-control login-form-input ps-3 pe-4" placeholder="Confirm password" required oninput="checkConfirmPasswordMatch()">
+                  <button type="button" class="login-pwd-toggle" style="right: 8px;" onclick="togglePasswordVisibility('regConfirmPassword', 'regEyeIcon2')">
+                    <i class="fa-solid fa-eye" id="regEyeIcon2" style="font-size: 0.75rem;"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Live Password Requirements Checklist -->
+            <div id="regPwdChecklist" class="p-2.5 rounded-3 border border-secondary border-opacity-25 font-mono d-none" style="background: rgba(3, 7, 18, 0.95); font-size: 0.68rem;">
+              <div class="text-secondary text-uppercase fw-semibold mb-1" style="font-size: 0.62rem;">Password Requirements:</div>
+              <div class="row g-1">
+                <div class="col-6" id="chkMinLength"><i class="fa-regular fa-circle text-secondary me-1"></i> Min 8 characters</div>
+                <div class="col-6" id="chkUpper"><i class="fa-regular fa-circle text-secondary me-1"></i> 1 Uppercase (A-Z)</div>
+                <div class="col-6" id="chkLower"><i class="fa-regular fa-circle text-secondary me-1"></i> 1 Lowercase (a-z)</div>
+                <div class="col-6" id="chkDigit"><i class="fa-regular fa-circle text-secondary me-1"></i> 1 Number (0-9)</div>
+                <div class="col-12" id="chkSpecial"><i class="fa-regular fa-circle text-secondary me-1"></i> 1 Special Character (!@#$%)</div>
+              </div>
+            </div>
+
+            <!-- Submit Register Button -->
+            <button type="submit" id="btnRegisterSubmit" class="btn-login-submit mt-2">
+              <i class="fa-solid fa-circle-check"></i>
+              <span>Create Industrial Account</span>
+            </button>
+          </form>
+
+          <!-- ========================================== -->
+          <!-- FORM 3: FORGOT PASSWORD MODE (Hidden)      -->
+          <!-- ========================================== -->
+          <form id="formForgot" class="auth-form-panel d-none">
+            <!-- Company Name (Optional) -->
+            <div>
+              <label class="form-label font-sans text-light small mb-1 fw-medium">Company Name (Optional)</label>
+              <div class="login-input-group">
+                <i class="fa-solid fa-building login-input-icon"></i>
+                <input type="text" id="forgotCompany" class="form-control login-form-input" placeholder="Enter company name if applicable">
+              </div>
+            </div>
+
+            <!-- Username or Registered Email -->
+            <div>
+              <label class="form-label font-sans text-light small mb-1 fw-medium">Username or Registered Email *</label>
+              <div class="login-input-group">
+                <i class="fa-solid fa-user login-input-icon"></i>
+                <input type="text" id="forgotIdentifier" class="form-control login-form-input" placeholder="Enter your username or email" required>
+              </div>
+            </div>
+
+            <!-- New Password & Confirm New Password -->
+            <div class="row g-2">
+              <div class="col-6">
+                <label class="form-label font-sans text-light small mb-1 fw-medium">New Password *</label>
+                <div class="login-input-group">
+                  <input type="password" id="forgotNewPassword" class="form-control login-form-input ps-3 pe-4" placeholder="Enter new password" required oninput="checkForgotComplexity(this.value)">
+                  <button type="button" class="login-pwd-toggle" style="right: 8px;" onclick="togglePasswordVisibility('forgotNewPassword', 'forgotEye1')">
+                    <i class="fa-solid fa-eye" id="forgotEye1" style="font-size: 0.75rem;"></i>
+                  </button>
+                </div>
+              </div>
+              <div class="col-6">
+                <div class="d-flex align-items-center justify-content-between mb-1">
+                  <label class="form-label font-sans text-light small m-0 fw-medium">Confirm New *</label>
+                  <span id="forgotMatchBadge" class="font-mono" style="font-size: 0.65rem;"></span>
+                </div>
+                <div class="login-input-group">
+                  <input type="password" id="forgotConfirmPassword" class="form-control login-form-input ps-3 pe-4" placeholder="Confirm password" required oninput="checkForgotMatch()">
+                  <button type="button" class="login-pwd-toggle" style="right: 8px;" onclick="togglePasswordVisibility('forgotConfirmPassword', 'forgotEye2')">
+                    <i class="fa-solid fa-eye" id="forgotEye2" style="font-size: 0.75rem;"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Submit Reset Button -->
+            <button type="submit" id="btnForgotSubmit" class="btn-login-submit mt-2">
+              <i class="fa-solid fa-key"></i>
+              <span>Reset Password & Update Access</span>
+            </button>
+          </form>
+
+          <!-- Bottom Security Subsystem Badge -->
+          <div class="d-flex align-items-center justify-content-center gap-2 font-mono text-secondary mt-4 pt-3 border-top border-secondary border-opacity-25" style="font-size: 0.65rem; letter-spacing: 0.05em;">
+            <i class="fa-solid fa-shield-halved text-success"></i>
+            <span>256-Bit Encrypted PostgreSQL 18 Subsystem</span>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- RIGHT COLUMN: Precision Tagline (Visible on lg screens) -->
+      <div class="col-lg-3 d-none d-lg-flex flex-column justify-content-end align-items-end text-end" style="min-height: 480px; padding-bottom: 2rem;">
+        <div class="mb-2">
+          <div class="login-right-heading">PRECISION TODAY.</div>
+          <div class="login-right-sub mt-1">A SMARTER TOMORROW.</div>
+        </div>
+        <div class="login-accent-bar"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// =========================================================================
+// PredictCNC Client-Side Auth Logic (Tab switching, Validation & AJAX)
+// =========================================================================
+const TYPO_DOMAINS = {
+  'gamil.com': 'gmail.com',
+  'gmial.com': 'gmail.com',
+  'gmai.com': 'gmail.com',
+  'gmaill.com': 'gmail.com',
+  'gmil.com': 'gmail.com',
+  'gmaik.com': 'gmail.com',
+  'yaho.com': 'yahoo.com',
+  'yahooo.com': 'yahoo.com',
+  'hotmial.com': 'hotmail.com',
+  'hotmale.com': 'hotmail.com',
+  'outlok.com': 'outlook.com',
+  'outloo.com': 'outlook.com',
+  'redifmail.com': 'rediffmail.com'
+};
+
+let currentSuggestedTypo = null;
+
+// Password visibility toggler
+function togglePasswordVisibility(inputId, iconId) {
+  const input = document.getElementById(inputId);
+  const icon = document.getElementById(iconId);
+  if (!input || !icon) return;
+  if (input.type === 'password') {
+    input.type = 'text';
+    icon.classList.remove('fa-eye');
+    icon.classList.add('fa-eye-slash');
+  } else {
+    input.type = 'password';
+    icon.classList.remove('fa-eye-slash');
+    icon.classList.add('fa-eye');
+  }
+}
+
+// Show alert banner inside card
+function showAlert(message, type = 'danger') {
+  const box = document.getElementById('authAlertBox');
+  if (!box) return;
+  box.classList.remove('d-none');
+  const isSuccess = type === 'success';
+  box.style.background = isSuccess ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)';
+  box.style.border = isSuccess ? '1px solid #34d399' : '1px solid #f87171';
+  box.style.color = isSuccess ? '#a7f3d0' : '#fecaca';
+  box.className = `p-2.5 px-3 mb-3 rounded-3 font-mono text-xs d-flex align-items-center gap-2 fw-bold ${isSuccess ? 'animate-fade-in' : 'animate-shake'}`;
+  const iconClass = isSuccess ? 'fa-solid fa-circle-check text-success fs-6' : 'fa-solid fa-triangle-exclamation text-danger fs-6';
+  box.innerHTML = `<i class="${iconClass}"></i><span>${message}</span>`;
+}
+
+function clearAlert() {
+  const box = document.getElementById('authAlertBox');
+  if (box) {
+    box.classList.add('d-none');
+    box.innerHTML = '';
+  }
+}
+
+// Switch cleanly between 'login', 'register', and 'forgot'
+function switchAuthMode(mode) {
+  clearAlert();
+  const tabSignIn = document.getElementById('tabBtnSignIn');
+  const tabRegister = document.getElementById('tabBtnRegister');
+  const tabsContainer = document.getElementById('tabsHeaderContainer');
+  const forgotBanner = document.getElementById('forgotHeaderBanner');
+  
+  const formSignIn = document.getElementById('formSignIn');
+  const formRegister = document.getElementById('formRegister');
+  const formForgot = document.getElementById('formForgot');
+
+  if (mode === 'login') {
+    tabsContainer.classList.remove('d-none');
+    forgotBanner.classList.add('d-none');
+    
+    tabSignIn.classList.add('active');
+    tabRegister.classList.remove('active');
+    
+    formSignIn.classList.remove('d-none');
+    formRegister.classList.add('d-none');
+    formForgot.classList.add('d-none');
+  } else if (mode === 'register') {
+    tabsContainer.classList.remove('d-none');
+    forgotBanner.classList.add('d-none');
+    
+    tabSignIn.classList.remove('active');
+    tabRegister.classList.add('active');
+    
+    formSignIn.classList.add('d-none');
+    formRegister.classList.remove('d-none');
+    formForgot.classList.add('d-none');
+  } else if (mode === 'forgot') {
+    tabsContainer.classList.add('d-none');
+    forgotBanner.classList.remove('d-none');
+    
+    formSignIn.classList.add('d-none');
+    formRegister.classList.add('d-none');
+    formForgot.classList.remove('d-none');
+  }
+}
+
+// Email Typo Validation
+function validateEmailField(val) {
+  const badge = document.getElementById('emailTypoBadge');
+  if (!badge) return;
+  if (!val || !val.includes('@')) {
+    badge.innerHTML = '';
+    currentSuggestedTypo = null;
+    return;
+  }
+  const domain = val.split('@')[1]?.toLowerCase().trim();
+  if (TYPO_DOMAINS[domain]) {
+    currentSuggestedTypo = TYPO_DOMAINS[domain];
+    badge.innerHTML = `<span class="text-warning">⚠ Typo: Use @${currentSuggestedTypo}?</span> <a href="javascript:void(0)" onclick="fixEmailTypo()" class="badge bg-danger text-white text-decoration-none ms-1">Fix</a>`;
+  } else {
+    currentSuggestedTypo = null;
+    const emailRegex = /^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z]{2,}$/;
+    if (emailRegex.test(val.trim())) {
+      badge.innerHTML = `<span class="text-success">✓ Valid</span>`;
+    } else {
+      badge.innerHTML = `<span class="text-warning">⚠ Incomplete</span>`;
+    }
+  }
+}
+
+function fixEmailTypo() {
+  const emailInput = document.getElementById('regEmail');
+  if (emailInput && currentSuggestedTypo && emailInput.value.includes('@')) {
+    const userPart = emailInput.value.split('@')[0];
+    emailInput.value = `${userPart}@${currentSuggestedTypo}`;
+    validateEmailField(emailInput.value);
+  }
+}
+
+// Password Complexity Check
+function checkRegPasswordComplexity(pwd) {
+  const box = document.getElementById('regPwdChecklist');
+  if (!pwd) {
+    if (box) box.classList.add('d-none');
+    return;
+  }
+  if (box) box.classList.remove('d-none');
+
+  const hasMin = pwd.length >= 8;
+  const hasUpper = /[A-Z]/.test(pwd);
+  const hasLower = /[a-z]/.test(pwd);
+  const hasDigit = /\d/.test(pwd);
+  const hasSpecial = /[!@#$%^&*(),.?":{}|<>\-_=+/\\\[\]`~]/.test(pwd);
+
+  updateRequirementItem('chkMinLength', hasMin, 'Min 8 characters');
+  updateRequirementItem('chkUpper', hasUpper, '1 Uppercase (A-Z)');
+  updateRequirementItem('chkLower', hasLower, '1 Lowercase (a-z)');
+  updateRequirementItem('chkDigit', hasDigit, '1 Number (0-9)');
+  updateRequirementItem('chkSpecial', hasSpecial, '1 Special Character (!@#$%)');
+
+  checkConfirmPasswordMatch();
+}
+
+function updateRequirementItem(id, valid, text) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (valid) {
+    el.innerHTML = `<i class="fa-solid fa-circle-check text-success me-1"></i> <span class="text-success">${text}</span>`;
+  } else {
+    el.innerHTML = `<i class="fa-regular fa-circle text-secondary me-1"></i> <span class="text-secondary">${text}</span>`;
+  }
+}
+
+function checkConfirmPasswordMatch() {
+  const p1 = document.getElementById('regPassword').value;
+  const p2 = document.getElementById('regConfirmPassword').value;
+  const badge = document.getElementById('confirmPassBadge');
+  if (!badge) return;
+  if (!p2) {
+    badge.innerHTML = '';
+    return;
+  }
+  if (p1 === p2) {
+    badge.innerHTML = `<span class="text-success">✓ Match</span>`;
+  } else {
+    badge.innerHTML = `<span class="text-danger">✗ Differ</span>`;
+  }
+}
+
+function checkForgotMatch() {
+  const p1 = document.getElementById('forgotNewPassword').value;
+  const p2 = document.getElementById('forgotConfirmPassword').value;
+  const badge = document.getElementById('forgotMatchBadge');
+  if (!badge) return;
+  if (!p2) {
+    badge.innerHTML = '';
+    return;
+  }
+  if (p1 === p2) {
+    badge.innerHTML = `<span class="text-success">✓ Match</span>`;
+  } else {
+    badge.innerHTML = `<span class="text-danger">✗ Differ</span>`;
+  }
+}
+
+function checkForgotComplexity(pwd) {
+  checkForgotMatch();
+}
+
+// Handle Remember Me on load
+document.addEventListener('DOMContentLoaded', () => {
+  const savedRemember = localStorage.getItem('predictcnc_remember_me') === 'true';
+  if (savedRemember) {
+    const savedCompany = localStorage.getItem('predictcnc_remembered_company') || '';
+    const savedUser = localStorage.getItem('predictcnc_remembered_username') || '';
+    const compInput = document.getElementById('loginCompany');
+    const userInput = document.getElementById('loginUsername');
+    const chk = document.getElementById('rememberMeCheckbox');
+    if (compInput && savedCompany) compInput.value = savedCompany;
+    if (userInput && savedUser) userInput.value = savedUser;
+    if (chk) chk.checked = true;
+  }
+
+  // Handle Form Register submit via API
+  const formRegister = document.getElementById('formRegister');
+  if (formRegister) {
+    formRegister.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const company = document.getElementById('regCompany').value.trim();
+      const name = document.getElementById('regAdminName').value.trim();
+      const username = document.getElementById('regUsername').value.trim();
+      const email = document.getElementById('regEmail').value.trim();
+      const password = document.getElementById('regPassword').value;
+      const confirmPass = document.getElementById('regConfirmPassword').value;
+
+      if (!company || !name || !username || !email || !password || !confirmPass) {
+        showAlert('Please fill in all required fields.');
+        return;
+      }
+      if (password !== confirmPass) {
+        showAlert('Passwords do not match. Please verify.');
+        return;
+      }
+
+      const btn = document.getElementById('btnRegisterSubmit');
+      btn.disabled = true;
+      btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i><span>Creating Industrial Account...</span>`;
+
+      try {
+        const resp = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ company_name: company, admin_name: name, email, username, password })
+        });
+        const data = await resp.json();
+        if (resp.ok) {
+          showAlert('Account created successfully! Please sign in with your credentials.', 'success');
+          document.getElementById('loginCompany').value = company;
+          document.getElementById('loginUsername').value = username;
+          document.getElementById('loginPassword').value = '';
+          setTimeout(() => switchAuthMode('login'), 1200);
+        } else {
+          showAlert(data.detail || 'Registration failed. Username or email may already exist.');
+        }
+      } catch (err) {
+        showAlert('Network error occurred during registration. Please try again.');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fa-solid fa-circle-check"></i><span>Create Industrial Account</span>`;
+      }
+    });
+  }
+
+  // Handle Form Forgot submit via API
+  const formForgot = document.getElementById('formForgot');
+  if (formForgot) {
+    formForgot.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const company = document.getElementById('forgotCompany').value.trim();
+      const identifier = document.getElementById('forgotIdentifier').value.trim();
+      const new_password = document.getElementById('forgotNewPassword').value;
+      const confirmPass = document.getElementById('forgotConfirmPassword').value;
+
+      if (!identifier || !new_password || !confirmPass) {
+        showAlert('Please fill in all required fields.');
+        return;
+      }
+      if (new_password !== confirmPass) {
+        showAlert('New passwords do not match.');
+        return;
+      }
+
+      const btn = document.getElementById('btnForgotSubmit');
+      btn.disabled = true;
+      btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i><span>Updating Credentials...</span>`;
+
+      try {
+        const resp = await fetch('/api/auth/reset-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ company_name: company, identifier, new_password })
+        });
+        const data = await resp.json();
+        if (resp.ok) {
+          showAlert(data.message || 'Password reset successfully! Please sign in.', 'success');
+          document.getElementById('loginUsername').value = identifier;
+          document.getElementById('loginPassword').value = '';
+          setTimeout(() => switchAuthMode('login'), 1200);
+        } else {
+          showAlert(data.detail || 'Password reset failed. Verify identifier.');
+        }
+      } catch (err) {
+        showAlert('Network error occurred during password reset.');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fa-solid fa-key"></i><span>Reset Password & Update Access</span>`;
+      }
+    });
+  }
+
+  // Handle Form Sign In submit (store remember me)
+  const formSignIn = document.getElementById('formSignIn');
+  if (formSignIn) {
+    formSignIn.addEventListener('submit', () => {
+      const chk = document.getElementById('rememberMeCheckbox');
+      const comp = document.getElementById('loginCompany').value.trim();
+      const user = document.getElementById('loginUsername').value.trim();
+      if (chk && chk.checked) {
+        localStorage.setItem('predictcnc_remember_me', 'true');
+        localStorage.setItem('predictcnc_remembered_company', comp);
+        localStorage.setItem('predictcnc_remembered_username', user);
+      } else {
+        localStorage.removeItem('predictcnc_remember_me');
+        localStorage.removeItem('predictcnc_remembered_company');
+        localStorage.removeItem('predictcnc_remembered_username');
+      }
+    });
+  }
+});
+</script>
+{% endblock %}
