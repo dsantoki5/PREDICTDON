@@ -44,7 +44,7 @@
   </div>
 
   <!-- Work Orders Data Table -->
-  <div class="table-responsive" style="border-radius: 12px; border: 1px solid rgba(30, 41, 59, 0.7); background: rgba(11, 17, 32, 0.65);">
+  <div class="table-responsive table-scroll-7-10" style="border-radius: 12px; border: 1px solid rgba(30, 41, 59, 0.7); background: rgba(11, 17, 32, 0.65);">
     <table class="table-cnc" id="maintenanceTable">
       <thead>
         <tr>
@@ -120,8 +120,11 @@
 
           <!-- Action Buttons -->
           <td class="text-end" style="white-space: nowrap;">
+            <a href="{{ url_for('predict_page') }}?machine_id={{ t.machine_id }}" class="action-btn-icon me-1.5" style="color: #38bdf8;" title="Run AI Re-Prediction for {{ t.machine_code }}">
+              <i class="fa-solid fa-wand-magic-sparkles"></i>
+            </a>
             <button class="action-btn-icon me-1.5" title="Edit / Update Status" 
-                    onclick="openEditModal({{ t.id }}, '{{ t.status }}', '{{ t.priority }}', '{{ (t.remarks or '')|replace("'", "\\'")|replace('"', '\\"') }}')">
+                    onclick="openEditModal({{ t.id }}, '{{ t.status }}', '{{ t.priority }}', '{{ (t.remarks or '')|replace("'", "\\'")|replace('"', '\\"') }}', {{ t.machine_id }}, '{{ t.machine_code }}')">
               <i class="fa-solid fa-pencil"></i>
             </button>
             <button class="action-btn-icon btn-danger-action" title="Delete Work Order" onclick="deleteTicket({{ t.id }})">
@@ -177,7 +180,7 @@
             </select>
             {% else %}
             <div class="p-2.5 rounded bg-dark border border-warning border-opacity-50 text-warning font-mono" style="font-size: 0.78rem;">
-              No machines registered yet. Please add a machine in Fleet Registry first.
+              No machines registered yet. Please add a machine in Machine Directory first.
             </div>
             <select id="tk_machine_id" class="d-none" required></select>
             {% endif %}
@@ -219,16 +222,34 @@
         </h5>
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
       </div>
-      <form onsubmit="handleUpdateTicket(event)">
+      <form id="editTicketForm" onsubmit="handleUpdateTicket(event, false)">
         <input type="hidden" id="edit_ticket_id">
+        <input type="hidden" id="edit_ticket_machine_id">
         <div class="modal-body p-4">
           <div class="mb-3.5">
             <label class="form-label font-mono small text-secondary text-uppercase fw-bold" style="font-size: 0.72rem; letter-spacing: 0.05em;">Work Status *</label>
-            <select id="edit_tk_status" class="form-select login-form-input" style="padding-left: 0.9rem !important;" required>
+            <select id="edit_tk_status" class="form-select login-form-input" style="padding-left: 0.9rem !important;" required onchange="handleStatusChange()">
               <option value="Pending">Pending</option>
               <option value="In Progress">In Progress</option>
               <option value="Completed">Completed</option>
             </select>
+          </div>
+
+          <!-- Re-prediction callout banner when marked Completed -->
+          <div id="completedRePredictBanner" class="p-3 rounded-3 mb-3.5 d-none" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.16) 0%, rgba(15, 23, 42, 0.95) 100%); border: 1px solid rgba(52, 211, 153, 0.45);">
+            <div class="d-flex align-items-center gap-2.5 mb-2 font-display text-white fw-bold" style="font-size: 0.88rem;">
+              <i class="fa-solid fa-wand-magic-sparkles text-success fs-5"></i>
+              <span>Maintenance Completed — Verify with Re-Prediction</span>
+            </div>
+            <p class="text-secondary font-sans mb-2.5" style="font-size: 0.78rem; line-height: 1.4;">
+              Saving this work order as <strong>Completed</strong> allows you to immediately run AI inference on machine <strong id="edit_machine_name_tag" class="text-info"></strong> to verify operational health.
+            </p>
+            <div class="form-check form-switch mb-0 d-flex align-items-center gap-2">
+              <input class="form-check-input mt-0" type="checkbox" id="chk_auto_redirect" checked style="cursor: pointer;">
+              <label class="form-check-label font-mono text-light fw-bold" for="chk_auto_redirect" style="font-size: 0.76rem; cursor: pointer;">
+                Redirect to Predictive AI inference immediately after saving
+              </label>
+            </div>
           </div>
 
           <div class="mb-3">
@@ -236,11 +257,18 @@
             <textarea id="edit_tk_remarks" class="form-control login-form-input" rows="3" style="padding-left: 0.9rem !important;" placeholder="Add updated diagnostic findings or work order notes..."></textarea>
           </div>
         </div>
-        <div class="modal-footer border-top border-secondary border-opacity-25 p-3.5 d-flex justify-content-end gap-2">
+        <div class="modal-footer border-top border-secondary border-opacity-25 p-3.5 d-flex justify-content-between align-items-center flex-wrap gap-2">
           <button type="button" class="btn btn-cnc-outline" data-bs-dismiss="modal">Cancel</button>
-          <button type="submit" class="btn-login-submit" style="width: auto; padding: 0.65rem 1.4rem;">
-            <i class="fa-solid fa-save"></i> Save Changes
-          </button>
+          
+          <div class="d-flex align-items-center gap-2">
+            <button type="submit" id="btnSaveStandard" class="btn-login-submit" style="width: auto; padding: 0.65rem 1.4rem;">
+              <i class="fa-solid fa-save me-1"></i> Save Changes
+            </button>
+            <button type="button" id="btnSaveAndPredict" class="btn btn-predict-cta d-none py-2 px-3.5 d-flex align-items-center gap-2" onclick="handleUpdateTicket(event, true)">
+              <i class="fa-solid fa-wand-magic-sparkles"></i>
+              <span>Save & Run Re-Prediction &rarr;</span>
+            </button>
+          </div>
         </div>
       </form>
     </div>
@@ -276,11 +304,31 @@
     }
   }
 
-  function openEditModal(id, status, priority, remarks) {
+  function handleStatusChange() {
+    const status = document.getElementById('edit_tk_status').value;
+    const banner = document.getElementById('completedRePredictBanner');
+    const btnPredict = document.getElementById('btnSaveAndPredict');
+    
+    if (status === 'Completed') {
+      banner.classList.remove('d-none');
+      btnPredict.classList.remove('d-none');
+    } else {
+      banner.classList.add('d-none');
+      btnPredict.classList.add('d-none');
+    }
+  }
+
+  function openEditModal(id, status, priority, remarks, machineId, machineCode) {
     document.getElementById('edit_ticket_id').value = id;
     document.getElementById('edit_ticket_display_id').innerText = id;
+    document.getElementById('edit_ticket_machine_id').value = machineId || '';
+    const nameTag = document.getElementById('edit_machine_name_tag');
+    if (nameTag) nameTag.innerText = machineCode ? `[${machineCode}]` : '';
+    
     document.getElementById('edit_tk_status').value = status;
     document.getElementById('edit_tk_remarks').value = remarks || '';
+    
+    handleStatusChange();
     
     const editModal = new bootstrap.Modal(document.getElementById('editTicketModal'));
     editModal.show();
@@ -318,11 +366,13 @@
     }
   }
 
-  async function handleUpdateTicket(e) {
-    e.preventDefault();
+  async function handleUpdateTicket(e, forceRedirectPredict = false) {
+    if (e) e.preventDefault();
     const ticketId = document.getElementById('edit_ticket_id').value;
+    const machineId = document.getElementById('edit_ticket_machine_id').value;
     const status = document.getElementById('edit_tk_status').value;
     const remarks = document.getElementById('edit_tk_remarks').value.trim();
+    const autoRedirect = document.getElementById('chk_auto_redirect').checked;
 
     try {
       const res = await fetch(`/api/maintenance/${ticketId}`, {
@@ -335,6 +385,18 @@
         alert(data.detail || 'Failed to update work order.');
         return;
       }
+
+      // If status is Completed and redirect requested, navigate directly to predict page
+      if ((status === 'Completed' && autoRedirect) || forceRedirectPredict) {
+        if (machineId) {
+          window.location.href = `{{ url_for('predict_page') }}?machine_id=${machineId}`;
+          return;
+        } else {
+          window.location.href = `{{ url_for('predict_page') }}`;
+          return;
+        }
+      }
+
       location.reload();
     } catch (err) {
       alert('Error: ' + err.message);
@@ -357,3 +419,4 @@
   }
 </script>
 {% endblock %}
+

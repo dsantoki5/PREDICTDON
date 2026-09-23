@@ -32,7 +32,7 @@ class MachineService:
             """INSERT INTO machines (
                 user_id, machine_code, machine_name, department, manufacturer,
                 installation_date, status, supervisor_name, supervisor_email, created_at
-            ) VALUES (%s, %s, %s, %s, %s, %s, 'Healthy', %s, %s, %s)""",
+            ) VALUES (%s, %s, %s, %s, %s, %s, 'Pending Assessment', %s, %s, %s)""",
             (user_id, machine_code.strip(), machine_name.strip(), department, manufacturer, installation_date, supervisor_name, supervisor_email, datetime.now())
         )
 

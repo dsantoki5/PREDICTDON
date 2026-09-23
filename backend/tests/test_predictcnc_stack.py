@@ -315,5 +315,108 @@ class TestPredictCNCStack(unittest.TestCase):
         execute_update("DELETE FROM users WHERE id = %s", (new_user_id,))
         print(" -> TEST 10 (Multi-Tenant Machine Fleet Isolation): PASS")
 
+    # -----------------------------------------------------------------
+    # TEST 11: Shared Email Across Multiple Companies
+    # -----------------------------------------------------------------
+    def test_11_same_email_multiple_companies(self):
+        """Test 11: An admin can use one email to manage multiple company accounts with distinct usernames."""
+        import time
+        ts = int(time.time())
+        shared_email = f"multiadmin_{ts}@gmail.com"
+        
+        # Company 1
+        user1_id = AuthService.register_user(
+            company_name="Alpha Tech CNC",
+            admin_name="Aarav",
+            email=shared_email,
+            username=f"aarav_alpha_{ts}",
+            password="Password@123"
+        )
+        self.assertIsNotNone(user1_id)
+
+        # Company 2 with SAME EMAIL
+        user2_id = AuthService.register_user(
+            company_name="Beta Precision",
+            admin_name="Aarav",
+            email=shared_email,
+            username=f"aarav_beta_{ts}",
+            password="Password@123"
+        )
+        self.assertIsNotNone(user2_id)
+        self.assertNotEqual(user1_id, user2_id)
+
+        # Duplicate username should still raise error
+        with self.assertRaises(ValueError):
+            AuthService.register_user(
+                company_name="Gamma Mills",
+                admin_name="Aarav",
+                email=shared_email,
+                username=f"aarav_alpha_{ts}", # duplicate username
+                password="Password@123"
+            )
+
+        # Authenticate by username
+        u1 = AuthService.authenticate_user(f"aarav_alpha_{ts}", "Password@123")
+        self.assertIsNotNone(u1)
+        self.assertEqual(u1["company_name"], "Alpha Tech CNC")
+
+        u2 = AuthService.authenticate_user(f"aarav_beta_{ts}", "Password@123")
+        self.assertIsNotNone(u2)
+        self.assertEqual(u2["company_name"], "Beta Precision")
+
+        # Authenticate with company disambiguation
+        u1_by_email = AuthService.authenticate_user(shared_email, "Password@123", company_name="Alpha Tech CNC")
+        self.assertIsNotNone(u1_by_email)
+        self.assertEqual(u1_by_email["id"], user1_id)
+
+        # Clean up
+        execute_update("DELETE FROM users WHERE id IN (%s, %s)", (user1_id, user2_id))
+        print(" -> TEST 11 (Shared Email Across Multiple Companies): PASS")
+
+    # -----------------------------------------------------------------
+    # TEST 12: Machine Initial Status Lifecycle (Unassessed -> Predicted)
+    # -----------------------------------------------------------------
+    def test_12_machine_unpredicted_status_lifecycle(self):
+        """Test 12: Newly created machine is 'Pending Assessment' until its first prediction runs."""
+        import time
+        ts = int(time.time())
+        
+        # 1. Create a fresh machine
+        m_id = MachineService.create_machine(
+            user_id=1,
+            machine_code=f"LIFE-{ts}",
+            machine_name="Lifecycle Test Milling CNC",
+            department="QA Bay",
+            manufacturer="Haas",
+            supervisor_name="QA Lead",
+            supervisor_email="qa@example.com"
+        )
+        self.assertIsNotNone(m_id)
+
+        # 2. Verify initial status is 'Pending Assessment' (NOT directly 'Healthy')
+        machine = MachineService.get_machine_by_id(m_id)
+        self.assertEqual(machine["status"], "Pending Assessment")
+
+        # 3. Run first normal telemetry prediction on this machine
+        pred_res = PredictionService.run_prediction(
+            machine_id=m_id,
+            air_temperature=298.15,
+            process_temperature=308.65,
+            rotational_speed=1500,
+            torque=40.0,
+            tool_wear=30
+        )
+        self.assertEqual(pred_res["suggested_machine_status"], "Healthy")
+
+        # 4. Verify machine status has now transitioned to 'Healthy'
+        updated_machine = MachineService.get_machine_by_id(m_id)
+        self.assertEqual(updated_machine["status"], "Healthy")
+
+        # Clean up
+        MachineService.delete_machine(m_id)
+        print(" -> TEST 12 (Machine Initial Status Lifecycle): PASS")
+
 if __name__ == "__main__":
     unittest.main()
+
+

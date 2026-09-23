@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Fleet Registry — PredictCNC AI Platform{% endblock %}
+{% block title %}Machine Directory — PredictCNC AI Platform{% endblock %}
 
 {% block content %}
 <!-- Main Glassmorphic Panel (Matching Dashboard, Maintenance & History) -->
@@ -10,10 +10,10 @@
   <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 pb-4 mb-4 border-bottom border-secondary border-opacity-25">
     <div>
       <div class="d-flex align-items-center gap-2 mb-1">
-        <span class="badge px-2.5 py-1 rounded-pill" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4); font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.1em; font-weight: 700;">MACHINERY FLEET MANAGEMENT</span>
+        <span class="badge px-2.5 py-1 rounded-pill" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4); font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.1em; font-weight: 700;">MACHINERY DIRECTORY</span>
       </div>
       <h2 class="font-display fw-bold mb-1 tracking-tight" style="font-size: 1.95rem;">
-        <span style="color: #38bdf8;">CNC Machine</span> <span class="text-white">Fleet Registry</span>
+        <span style="color: #38bdf8;">CNC Machine</span> <span class="text-white">Directory</span>
       </h2>
       <p class="text-secondary mb-0 font-sans" style="font-size: 0.88rem;">
         Manage industrial CNC assets, plant departments, OEM specifications, and designated supervisor alert routing.
@@ -118,8 +118,8 @@
       </div>
     </div>
 
-    <!-- Table Responsive Body -->
-    <div class="table-responsive">
+    <!-- Table Responsive Body (Shows 7-10 rows then scrolls smoothly) -->
+    <div class="table-responsive table-scroll-7-10">
       <table class="table-cnc" id="machinesTable">
         <thead>
           <tr>
@@ -169,20 +169,24 @@
                 <span class="badge-status-pill badge-status-pending">
                   <span class="status-bullet">●</span> Warning
                 </span>
-              {% else %}
+              {% elif m.status == 'Critical' %}
                 <span class="badge-priority badge-priority-critical">
                   <i class="fa-solid fa-skull"></i> Critical
                 </span>
+              {% else %}
+                <a href="{{ url_for('predict_page') }}?machine_id={{ m.id }}" class="badge-status-pill text-decoration-none" style="background: rgba(56, 189, 248, 0.12); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.35); font-size: 0.74rem;" title="Run first diagnostic prediction">
+                  <span class="status-bullet" style="color: #38bdf8;">●</span> Awaiting Prediction <i class="fa-solid fa-arrow-right ms-1" style="font-size: 0.65rem;"></i>
+                </a>
               {% endif %}
             </td>
 
             <!-- Supervisor -->
             <td>
               <div class="d-flex align-items-center gap-2">
-                <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold font-mono text-white" style="width: 26px; height: 26px; background: rgba(56, 189, 248, 0.2); border: 1px solid rgba(56, 189, 248, 0.4); font-size: 0.7rem;">
-                  {{ (m.supervisor_name or 'U')[:1] | upper }}
+                <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold font-mono text-white flex-shrink-0" style="width: 28px; height: 28px; background: rgba(56, 189, 248, 0.2); border: 1px solid rgba(56, 189, 248, 0.4); font-size: 0.74rem;">
+                  {{ (m.supervisor_name or session.get('user', {}).get('admin_name') or 'S')[:1] | upper }}
                 </div>
-                <span class="text-white font-sans fw-semibold" style="font-size: 0.82rem;">
+                <span class="text-white font-sans fw-semibold text-truncate" style="font-size: 0.84rem; max-width: 140px;">
                   {{ m.supervisor_name or session.get('user', {}).get('admin_name') or 'Supervisor' }}
                 </span>
               </div>
@@ -190,8 +194,9 @@
 
             <!-- Alert Email -->
             <td>
-              <span class="font-mono px-2 py-0.5 rounded" style="background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(51, 65, 85, 0.7); color: #93c5fd; font-size: 0.76rem;">
-                <i class="fa-solid fa-envelope me-1 text-info opacity-75"></i>{{ m.supervisor_email or session.get('user', {}).get('email') or 'supervisor@predictcnc.local' }}
+              <span class="font-mono px-2 py-0.5 rounded d-inline-flex align-items-center text-truncate" style="background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(51, 65, 85, 0.7); color: #93c5fd; font-size: 0.76rem; max-width: 220px;" title="{{ m.supervisor_email or session.get('user', {}).get('email') or 'supervisor@predictcnc.local' }}">
+                <i class="fa-solid fa-envelope me-1.5 text-info opacity-75 flex-shrink-0"></i>
+                <span class="text-truncate">{{ m.supervisor_email or session.get('user', {}).get('email') or 'supervisor@predictcnc.local' }}</span>
               </span>
             </td>
 
@@ -341,7 +346,7 @@
                   <span>Assigned Supervisor</span>
                 </div>
               </div>
-              <input type="text" id="add_sup_name" class="telemetry-text-input" placeholder="e.g. Divya Santoki" value="{{ session.get('user', {}).get('admin_name') or '' }}" style="font-size: 0.88rem;">
+              <input type="text" id="add_sup_name" class="telemetry-text-input" placeholder="Enter supervisor name" value="{{ session.get('user', {}).get('admin_name') or '' }}" style="font-size: 0.88rem;">
             </div>
 
             <!-- Supervisor Email -->

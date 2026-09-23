@@ -229,14 +229,14 @@
             <div class="table-header-icon-badge">
               <i class="fa-solid fa-microchip"></i>
             </div>
-            <h6 class="font-display fw-bold text-white mb-0" style="font-size: 0.95rem;">Registered Fleet</h6>
+            <h6 class="font-display fw-bold text-white mb-0" style="font-size: 0.95rem;">Machine Directory</h6>
           </div>
           <a href="{{ url_for('machines_page') }}" class="table-header-link">
-            <span>Manage Fleet</span>
+            <span>View All</span>
             <i class="fa-solid fa-arrow-right" style="font-size: 0.72rem;"></i>
           </a>
         </div>
-        <div class="table-responsive">
+        <div class="table-responsive table-scroll-7-10">
           <table class="table-cnc">
             <thead>
               <tr>
@@ -247,7 +247,7 @@
               </tr>
             </thead>
             <tbody>
-              {% for m in machines[:5] %}
+              {% for m in machines %}
               <tr>
                 <td class="font-mono fw-bold" style="color: #38bdf8;">{{ m.machine_code }}</td>
                 <td class="text-white fw-semibold">{{ m.machine_name }}</td>
@@ -261,10 +261,14 @@
                   <span class="badge rounded-pill px-3 py-1" style="background: rgba(245, 158, 11, 0.18); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.45); font-size: 0.75rem; font-weight: 700;">
                     &bull; Warning
                   </span>
-                  {% else %}
+                  {% elif m.status == 'Healthy' %}
                   <span class="badge rounded-pill px-3 py-1" style="background: rgba(16, 185, 129, 0.18); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.45); font-size: 0.75rem; font-weight: 700;">
                     &bull; Healthy
                   </span>
+                  {% else %}
+                  <a href="{{ url_for('predict_page') }}?machine_id={{ m.id }}" class="badge rounded-pill px-2.5 py-1 text-decoration-none" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4); font-size: 0.72rem; font-weight: 700;">
+                    &bull; Awaiting Prediction
+                  </a>
                   {% endif %}
                 </td>
               </tr>

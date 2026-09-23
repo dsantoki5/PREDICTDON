@@ -590,7 +590,7 @@ body {
 }
 
 .table-cnc th {
-  background-color: rgba(15, 23, 42, 0.75);
+  background-color: rgba(15, 23, 42, 0.95);
   color: #94a3b8;
   font-family: var(--font-mono);
   font-size: 0.75rem;
@@ -600,6 +600,42 @@ body {
   padding: 0.95rem 1.25rem;
   border-bottom: 1px solid rgba(30, 41, 59, 0.9);
 }
+
+/* Scrollable Container (Shows 7 to 10 rows, then scrolls with sticky table headers) */
+.table-scroll-7-10 {
+  max-height: 485px;
+  overflow-y: auto;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(56, 189, 248, 0.4) rgba(7, 13, 31, 0.9);
+}
+
+.table-scroll-7-10::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.table-scroll-7-10::-webkit-scrollbar-track {
+  background: rgba(7, 13, 31, 0.85);
+}
+
+.table-scroll-7-10::-webkit-scrollbar-thumb {
+  background: rgba(56, 189, 248, 0.35);
+  border-radius: 4px;
+}
+
+.table-scroll-7-10::-webkit-scrollbar-thumb:hover {
+  background: rgba(56, 189, 248, 0.6);
+}
+
+.table-scroll-7-10 thead th {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background-color: #0b1120 !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+}
+
 
 .table-cnc td {
   padding: 0.95rem 1.25rem;
@@ -1423,4 +1459,172 @@ body {
 .alert .btn-close:hover {
   opacity: 1 !important;
   transform: scale(1.1);
+}
+
+/* =====================================================================
+   PREDICT CNC ADVANCED INFERENCE & TELEMETRY UI STYLES
+   ===================================================================== */
+.telemetry-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(51, 65, 85, 0.75);
+  border-radius: 10px;
+  overflow: hidden;
+  transition: all 0.2s ease;
+}
+
+.telemetry-input-wrap:focus-within {
+  border-color: #38bdf8;
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2);
+  background: rgba(15, 23, 42, 0.98);
+}
+
+.telemetry-input-icon {
+  width: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.95rem;
+  color: #94a3b8;
+  flex-shrink: 0;
+}
+
+.telemetry-input-field {
+  flex-grow: 1;
+  background: transparent !important;
+  border: none !important;
+  color: #ffffff !important;
+  font-family: var(--font-mono);
+  font-size: 0.92rem;
+  font-weight: 600;
+  padding: 0.65rem 0.75rem;
+  outline: none !important;
+  box-shadow: none !important;
+  -moz-appearance: textfield;
+}
+
+.telemetry-input-field::-webkit-outer-spin-button,
+.telemetry-input-field::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+
+.telemetry-input-unit {
+  padding: 0.4rem 0.85rem;
+  color: #94a3b8;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 600;
+  background: rgba(30, 41, 59, 0.6);
+  border-left: 1px solid rgba(51, 65, 85, 0.6);
+  flex-shrink: 0;
+}
+
+.metric-tile-thermal {
+  background: linear-gradient(145deg, rgba(245, 158, 11, 0.14) 0%, rgba(15, 23, 42, 0.95) 100%);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+}
+
+.metric-tile-power {
+  background: linear-gradient(145deg, rgba(56, 189, 248, 0.14) 0%, rgba(15, 23, 42, 0.95) 100%);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+}
+
+.metric-tile-torque {
+  background: linear-gradient(145deg, rgba(168, 85, 247, 0.14) 0%, rgba(15, 23, 42, 0.95) 100%);
+  border: 1px solid rgba(168, 85, 247, 0.35);
+}
+
+.metric-tile-lifespan {
+  background: linear-gradient(145deg, rgba(16, 185, 129, 0.14) 0%, rgba(15, 23, 42, 0.95) 100%);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
+.param-icon-box {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.82rem;
+  margin-right: 0.75rem;
+  flex-shrink: 0;
+}
+
+.hero-status-circle {
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.6rem;
+  flex-shrink: 0;
+}
+
+.btn-predict-cta {
+  background: linear-gradient(135deg, #0284c7 0%, #2563eb 50%, #1d4ed8 100%);
+  color: #ffffff;
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  box-shadow: 0 4px 20px rgba(37, 99, 235, 0.35);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  font-weight: 600;
+  border-radius: 10px;
+}
+
+.btn-predict-cta:hover {
+  background: linear-gradient(135deg, #0369a1 0%, #1d4ed8 50%, #1e40af 100%);
+  color: #ffffff;
+  box-shadow: 0 6px 28px rgba(37, 99, 235, 0.5);
+  transform: translateY(-1px);
+}
+
+.btn-predict-cta:active {
+  transform: translateY(1px);
+}
+
+.status-pill-normal {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border: 1px solid rgba(52, 211, 153, 0.35);
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+  font-weight: 600;
+  padding: 0.25rem 0.65rem;
+  border-radius: 9999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.status-pill-warning {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(251, 191, 36, 0.35);
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+  font-weight: 600;
+  padding: 0.25rem 0.65rem;
+  border-radius: 9999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.status-pill-critical {
+  background: rgba(239, 68, 68, 0.18);
+  color: #f87171;
+  border: 1px solid rgba(248, 113, 113, 0.4);
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+  font-weight: 600;
+  padding: 0.25rem 0.65rem;
+  border-radius: 9999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
 }

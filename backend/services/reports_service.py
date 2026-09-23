@@ -40,6 +40,7 @@ class ReportsService:
         healthy_count = sum(1 for m in machines if m.get("status") == "Healthy")
         warning_count = sum(1 for m in machines if m.get("status") == "Warning")
         critical_count = sum(1 for m in machines if m.get("status") == "Critical")
+        unassessed_count = sum(1 for m in machines if m.get("status") not in ["Healthy", "Warning", "Critical"])
 
         total_predictions = len(predictions)
         normal_preds = sum(1 for p in predictions if p.get("predicted_class") == 0 or p.get("prediction") == "Normal Operation")
@@ -80,6 +81,7 @@ class ReportsService:
             "healthy_machines": healthy_count,
             "warning_machines": warning_count,
             "critical_machines": critical_count,
+            "unassessed_machines": unassessed_count,
             "total_predictions": total_predictions,
             "normal_predictions": normal_preds,
             "warning_predictions": warning_preds,

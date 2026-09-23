@@ -69,9 +69,10 @@ def index():
 @app.route("/login", methods=["GET", "POST"])
 def login_page():
     if request.method == "POST":
+        company_name = request.form.get("company_name", "").strip()
         username = request.form.get("username", "").strip()
         password = request.form.get("password", "").strip()
-        user = AuthService.authenticate_user(username, password)
+        user = AuthService.authenticate_user(username, password, company_name=company_name)
         if user:
             session["user_id"] = user["id"]
             session["user"] = {
@@ -174,9 +175,10 @@ def api_health():
 @app.route("/api/auth/login", methods=["POST"])
 def api_login():
     data = request.get_json() or {}
+    company_name = data.get("company_name", "").strip()
     username = data.get("username", "")
     password = data.get("password", "")
-    user = AuthService.authenticate_user(username, password)
+    user = AuthService.authenticate_user(username, password, company_name=company_name)
     if not user:
         return jsonify({"detail": "Invalid username or password"}), 401
     

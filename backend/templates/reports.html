@@ -238,6 +238,12 @@
                   <span class="text-secondary d-flex align-items-center gap-1.5"><span class="status-bullet text-danger">●</span> Critical</span>
                   <span class="text-white fw-bold">{{ metrics.critical_machines }} <small class="text-secondary" style="font-size: 0.7rem;">({{ "%.1f"|format((metrics.critical_machines / metrics.total_machines * 100) if metrics.total_machines > 0 else 0) }}%)</small></span>
                 </div>
+                {% if (metrics.unassessed_machines or 0) > 0 %}
+                <div class="d-flex align-items-center justify-content-between py-1 border-bottom border-secondary border-opacity-25">
+                  <span class="text-secondary d-flex align-items-center gap-1.5"><span class="status-bullet text-info">●</span> Awaiting Prediction</span>
+                  <span class="text-white fw-bold">{{ metrics.unassessed_machines }} <small class="text-secondary" style="font-size: 0.7rem;">({{ "%.1f"|format((metrics.unassessed_machines / metrics.total_machines * 100) if metrics.total_machines > 0 else 0) }}%)</small></span>
+                </div>
+                {% endif %}
                 <div class="d-flex align-items-center justify-content-between pt-1">
                   <span class="text-secondary">Total</span>
                   <span class="text-info fw-bold">{{ metrics.total_machines }} <small class="text-secondary" style="font-size: 0.7rem;">(100%)</small></span>
@@ -352,17 +358,18 @@
       const healthy = {{ metrics.healthy_machines }};
       const warning = {{ metrics.warning_machines }};
       const critical = {{ metrics.critical_machines }};
+      const unassessed = {{ metrics.unassessed_machines or 0 }};
       const total = {{ metrics.total_machines }};
 
-      const doughnutData = (total > 0) ? [healthy, warning, critical] : [1, 0, 0];
+      const doughnutData = (total > 0) ? [healthy, warning, critical, unassessed] : [1, 0, 0, 0];
       const doughnutColors = (total > 0) 
-        ? ['#10b981', '#f59e0b', '#ef4444'] 
-        : ['rgba(51, 65, 85, 0.5)', 'transparent', 'transparent'];
+        ? ['#10b981', '#f59e0b', '#ef4444', '#38bdf8'] 
+        : ['rgba(51, 65, 85, 0.5)', 'transparent', 'transparent', 'transparent'];
 
       new Chart(statusCtx, {
         type: 'doughnut',
         data: {
-          labels: ['Healthy', 'Warning', 'Critical'],
+          labels: ['Healthy', 'Warning', 'Critical', 'Awaiting Prediction'],
           datasets: [{
             data: doughnutData,
             backgroundColor: doughnutColors,

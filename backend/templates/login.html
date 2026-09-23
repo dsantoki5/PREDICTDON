@@ -140,7 +140,7 @@
               <label class="form-label font-sans text-light small mb-1.5 fw-medium">Username or Email *</label>
               <div class="login-input-group">
                 <i class="fa-solid fa-user login-input-icon"></i>
-                <input type="text" name="username" id="loginUsername" class="form-control login-form-input" placeholder="Enter your username or email" value="admin" required autofocus>
+                <input type="text" name="username" id="loginUsername" class="form-control login-form-input" placeholder="Enter your username or email" required autofocus>
               </div>
             </div>
 
@@ -149,7 +149,7 @@
               <label class="form-label font-sans text-light small mb-1.5 fw-medium">Password *</label>
               <div class="login-input-group">
                 <i class="fa-solid fa-lock login-input-icon"></i>
-                <input type="password" name="password" id="loginPassword" class="form-control login-form-input pe-5" placeholder="Enter your password" value="admin123" required>
+                <input type="password" name="password" id="loginPassword" class="form-control login-form-input pe-5" placeholder="Enter your password" required>
                 <button type="button" class="login-pwd-toggle" onclick="togglePasswordVisibility('loginPassword', 'loginEyeIcon')">
                   <i class="fa-solid fa-eye" id="loginEyeIcon"></i>
                 </button>
@@ -593,7 +593,7 @@ document.addEventListener('DOMContentLoaded', () => {
           document.getElementById('loginPassword').value = '';
           setTimeout(() => switchAuthMode('login'), 1200);
         } else {
-          showAlert(data.detail || 'Registration failed. Username or email may already exist.');
+          showAlert(data.detail || 'Registration failed. Username may already exist.');
         }
       } catch (err) {
         showAlert('Network error occurred during registration. Please try again.');
