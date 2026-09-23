@@ -1,0 +1,18 @@
+{
+    "model_name": "LightGBM",
+    "smote_strategy": "No_SMOTE",
+    "critical_class": 2,
+    "selected_threshold": 0.10,
+    "selection_status": "Meets_Requirements",
+    "minimum_critical_recall": 0.4,
+    "minimum_critical_precision": 0.5,
+    "metric_weights": {
+        "accuracy": 0.3,
+        "balanced_accuracy": 0.2,
+        "macro_f1_score": 0.2,
+        "critical_f1_score": 0.2,
+        "critical_recall": 0.1
+    },
+    "threshold_selection_dataset": "validation",
+    "final_evaluation_dataset": "test"
+}

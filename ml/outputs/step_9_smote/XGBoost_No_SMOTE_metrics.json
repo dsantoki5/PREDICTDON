@@ -1,0 +1,14 @@
+{
+    "accuracy": 0.8305,
+    "balanced_accuracy": 0.6904720236345275,
+    "macro_precision": 0.8136583073086044,
+    "macro_recall": 0.6904720236345275,
+    "macro_f1_score": 0.7242608723784878,
+    "weighted_f1_score": 0.8209032865210371,
+    "critical_precision": 0.746031746031746,
+    "critical_recall": 0.3671875,
+    "critical_f1_score": 0.49214659685863876,
+    "model": "XGBoost",
+    "strategy": "No_SMOTE",
+    "smote_applied": false
+}

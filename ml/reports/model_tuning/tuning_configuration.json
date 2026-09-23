@@ -1,0 +1,44 @@
+{
+    "LightGBM": {
+        "best_parameters": {
+            "subsample_freq": 1,
+            "subsample": 1.0,
+            "reg_lambda": 0.1,
+            "reg_alpha": 0.5,
+            "num_leaves": 31,
+            "n_estimators": 500,
+            "min_child_samples": 30,
+            "max_depth": 8,
+            "learning_rate": 0.1,
+            "colsample_bytree": 0.9
+        },
+        "best_cv_macro_f1": 0.7416557251145139,
+        "model_path": "E:\\AARAV\\Project-Predictive-Maintenance-7th-Sem\\models\\tuned_models\\LightGBM.joblib"
+    },
+    "XGBoost": {
+        "best_parameters": {
+            "subsample": 0.7,
+            "reg_lambda": 1.0,
+            "reg_alpha": 0.1,
+            "n_estimators": 200,
+            "min_child_weight": 5,
+            "max_depth": 8,
+            "learning_rate": 0.1,
+            "gamma": 0,
+            "colsample_bytree": 0.9
+        },
+        "best_cv_macro_f1": 0.7118508350193782,
+        "model_path": "E:\\AARAV\\Project-Predictive-Maintenance-7th-Sem\\models\\tuned_models\\XGBoost.joblib"
+    },
+    "Random_Forest": {
+        "best_parameters": {
+            "n_estimators": 500,
+            "min_samples_split": 5,
+            "min_samples_leaf": 1,
+            "max_features": null,
+            "max_depth": 30
+        },
+        "best_cv_macro_f1": 0.6795562522654015,
+        "model_path": "E:\\AARAV\\Project-Predictive-Maintenance-7th-Sem\\models\\tuned_models\\Random_Forest.joblib"
+    }
+}

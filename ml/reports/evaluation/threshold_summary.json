@@ -1,0 +1,7 @@
+{
+    "warning": "Thresholds were evaluated on the test dataset for exploratory analysis only. Validate any selected threshold on a separate validation dataset before production deployment.",
+    "best_macro_f1_threshold": 0.5,
+    "best_macro_f1": 0.7594641425215322,
+    "best_critical_recall_threshold": 0.05,
+    "best_critical_recall": 0.75
+}

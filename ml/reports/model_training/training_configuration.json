@@ -1,0 +1,26 @@
+{
+    "target_column": "Machine_Status_Code",
+    "random_state": 42,
+    "expected_classes": [
+        0,
+        1,
+        2
+    ],
+    "class_names": {
+        "0": "Healthy",
+        "1": "Warning",
+        "2": "Critical"
+    },
+    "training_file": "E:\\AARAV\\Project-Predictive-Maintenance-7th-Sem\\data\\processed\\train_dataset.csv",
+    "testing_file": "E:\\AARAV\\Project-Predictive-Maintenance-7th-Sem\\data\\processed\\test_dataset.csv",
+    "training_rows": 8000,
+    "testing_rows": 2000,
+    "number_of_predictors": 44,
+    "models_trained": [
+        "Logistic_Regression",
+        "Decision_Tree",
+        "Random_Forest",
+        "LightGBM",
+        "XGBoost"
+    ]
+}

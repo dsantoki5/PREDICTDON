@@ -1,0 +1,24 @@
+{
+    "step": 13,
+    "step_name": "Final Model Inference and Alert Generation",
+    "model_name": "LightGBM",
+    "sampling_strategy": "No_SMOTE",
+    "model_file": "D:\\DIVYA\\PROJECT\\PredictCNC AARAV\\ml\\models\\final_models\\LightGBM_No_SMOTE_Final.joblib",
+    "test_dataset": "D:\\DIVYA\\PROJECT\\PredictCNC AARAV\\ml\\data\\processed\\test_dataset.csv",
+    "target_column": "Machine_Status_Code",
+    "critical_class": 2,
+    "critical_threshold": 0.1,
+    "total_records": 2000,
+    "total_critical_alerts": 203,
+    "prediction_counts": {
+        "0": 1154,
+        "1": 643,
+        "2": 203
+    },
+    "critical_alert_percentage": 10.15,
+    "output_files": {
+        "predictions": "D:\\DIVYA\\PROJECT\\PredictCNC AARAV\\ml\\outputs\\step_13_inference\\final_predictions.csv",
+        "critical_alerts": "D:\\DIVYA\\PROJECT\\PredictCNC AARAV\\ml\\outputs\\step_13_inference\\critical_machine_alerts.csv",
+        "summary": "D:\\DIVYA\\PROJECT\\PredictCNC AARAV\\ml\\outputs\\step_13_inference\\inference_summary.json"
+    }
+}

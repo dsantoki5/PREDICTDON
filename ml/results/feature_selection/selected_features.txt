@@ -1,0 +1,5 @@
+Rotational_speed_rpm
+Torque_Nm
+Rotational_speed_rpm_change
+Torque_Nm_change
+Torque_Nm_rolling_max

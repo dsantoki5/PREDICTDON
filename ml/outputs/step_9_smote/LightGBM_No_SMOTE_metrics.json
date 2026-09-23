@@ -1,0 +1,14 @@
+{
+    "accuracy": 0.8565,
+    "balanced_accuracy": 0.7244792850967404,
+    "macro_precision": 0.8298286475668899,
+    "macro_recall": 0.7244792850967404,
+    "macro_f1_score": 0.7576711283607835,
+    "weighted_f1_score": 0.8496891140468726,
+    "critical_precision": 0.7571428571428571,
+    "critical_recall": 0.4140625,
+    "critical_f1_score": 0.5353535353535354,
+    "model": "LightGBM",
+    "strategy": "No_SMOTE",
+    "smote_applied": false
+}

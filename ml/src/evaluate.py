@@ -20,10 +20,23 @@ from ml.src.feature_engineering import engineer_features_44, MODEL_FEATURES_44
 def evaluate_model(dataset_filename="ai4i2020.csv"):
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     data_path = os.path.join(base_dir, "data", "raw", dataset_filename)
-    model_path = os.path.join(base_dir, "models", "LightGBM_No_SMOTE_Final.joblib")
+    
+    candidates = [
+        os.path.join(base_dir, "models", "LightGBM_No_SMOTE_Final.joblib"),
+        os.path.join(base_dir, "models", "final_models", "LightGBM_No_SMOTE_Final.joblib"),
+        os.path.join(base_dir, "models", "final_lightgbm_model.pkl"),
+    ]
+    model_path = None
+    for cand in candidates:
+        if os.path.exists(cand):
+            model_path = cand
+            break
 
     if not os.path.exists(data_path):
         raise FileNotFoundError(f"Dataset not found at {data_path}")
+
+    if model_path is None:
+        raise FileNotFoundError(f"Model artifact not found in candidates: {candidates}")
 
     print(f"Loading authoritative dataset: {data_path}")
     df = pd.read_csv(data_path)

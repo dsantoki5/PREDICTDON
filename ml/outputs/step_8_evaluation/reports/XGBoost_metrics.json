@@ -1,0 +1,15 @@
+{
+    "accuracy": 0.8555,
+    "balanced_accuracy": 0.7172207028879903,
+    "macro_precision": 0.8187385381848609,
+    "macro_recall": 0.7172207028879903,
+    "macro_f1_score": 0.7488007652012078,
+    "weighted_f1_score": 0.8483500689974632,
+    "critical_class": 2,
+    "critical_precision": 0.7246376811594203,
+    "critical_recall": 0.390625,
+    "critical_f1_score": 0.5076142131979695,
+    "critical_actual_count": 128,
+    "critical_predicted_count": 69,
+    "roc_auc_ovr_macro": 0.9250671111310457
+}
