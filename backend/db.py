@@ -381,6 +381,13 @@ def init_db():
             if "supervisor_email" not in machine_cols:
                 cur.execute("ALTER TABLE machines ADD COLUMN supervisor_email VARCHAR(100) NULL")
 
+            # Scope machine_code uniqueness per user account (drop legacy global unique index if present)
+            try:
+                cur.execute("DROP INDEX IF EXISTS ix_machines_machine_code")
+                cur.execute("CREATE UNIQUE INDEX IF NOT EXISTS ix_machines_user_code ON machines (user_id, machine_code)")
+            except Exception as idx_err:
+                logger.warning(f"Index migration notice: {idx_err}")
+
             conn.commit()
     finally:
         conn.close()

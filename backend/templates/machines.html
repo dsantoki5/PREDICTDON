@@ -312,6 +312,11 @@
       <!-- Modal Form -->
       <form onsubmit="handleAddMachine(event)">
         <div class="modal-body p-4">
+          <!-- Dynamic Form Error Alert Banner -->
+          <div id="addMachineError" class="alert alert-danger border-0 rounded-3 mb-3 p-3 d-none align-items-center gap-2" style="background: rgba(239, 68, 68, 0.15); border-left: 4px solid #f87171 !important; font-size: 0.84rem; color: #fca5a5;">
+            <i class="fa-solid fa-circle-exclamation fs-5 flex-shrink-0" style="color: #f87171;"></i>
+            <span id="addMachineErrorText"></span>
+          </div>
 
           <!-- Section 1: Asset Identification & Specs -->
           <div class="d-flex align-items-center gap-2 mb-3 pb-1 border-bottom border-secondary border-opacity-25">
@@ -450,6 +455,12 @@
       <form onsubmit="handleEditMachine(event)">
         <input type="hidden" id="edit_id">
         <div class="modal-body p-4">
+          <!-- Dynamic Edit Form Error Alert Banner -->
+          <div id="editMachineError" class="alert alert-danger border-0 rounded-3 mb-3 p-3 d-none align-items-center gap-2" style="background: rgba(239, 68, 68, 0.15); border-left: 4px solid #f87171 !important; font-size: 0.84rem; color: #fca5a5;">
+            <i class="fa-solid fa-circle-exclamation fs-5 flex-shrink-0" style="color: #f87171;"></i>
+            <span id="editMachineErrorText"></span>
+          </div>
+
           <div class="row g-3 mb-3">
             <div class="col-12 col-md-5">
               <div class="telemetry-input-header">
@@ -549,6 +560,13 @@
   async function handleAddMachine(e) {
     e.preventDefault();
     const saveBtn = document.getElementById('saveMachineBtn');
+    const errBox = document.getElementById('addMachineError');
+    const errText = document.getElementById('addMachineErrorText');
+    if (errBox) {
+      errBox.classList.add('d-none');
+      errBox.classList.remove('d-flex');
+    }
+
     saveBtn.disabled = true;
     saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
 
@@ -569,20 +587,40 @@
       });
       const data = await res.json();
       if (!res.ok) {
-        alert(data.detail || 'Failed to add machine.');
+        const errorMsg = data.detail || 'Failed to add machine asset.';
+        if (errBox && errText) {
+          errText.innerText = errorMsg;
+          errBox.classList.remove('d-none');
+          errBox.classList.add('d-flex');
+        } else {
+          alert(errorMsg);
+        }
         saveBtn.disabled = false;
         saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save & Register Asset';
         return;
       }
       location.reload();
     } catch (err) {
-      alert('Error adding machine: ' + err.message);
+      const errorMsg = 'Error adding machine: ' + err.message;
+      if (errBox && errText) {
+        errText.innerText = errorMsg;
+        errBox.classList.remove('d-none');
+        errBox.classList.add('d-flex');
+      } else {
+        alert(errorMsg);
+      }
       saveBtn.disabled = false;
       saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save & Register Asset';
     }
   }
 
   function openEditModal(id, code, name, dept, mfg, supName, supEmail) {
+    const errBox = document.getElementById('editMachineError');
+    if (errBox) {
+      errBox.classList.add('d-none');
+      errBox.classList.remove('d-flex');
+    }
+
     document.getElementById('edit_id').value = id;
     document.getElementById('edit_code').value = code;
     document.getElementById('edit_modal_code_display').innerText = code;
@@ -600,6 +638,13 @@
     e.preventDefault();
     const id = document.getElementById('edit_id').value;
     const updateBtn = document.getElementById('updateMachineBtn');
+    const errBox = document.getElementById('editMachineError');
+    const errText = document.getElementById('editMachineErrorText');
+    if (errBox) {
+      errBox.classList.add('d-none');
+      errBox.classList.remove('d-flex');
+    }
+
     updateBtn.disabled = true;
     updateBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Updating...';
 
@@ -619,14 +664,28 @@
       });
       const data = await res.json();
       if (!res.ok) {
-        alert(data.detail || 'Failed to update machine.');
+        const errorMsg = data.detail || 'Failed to update machine.';
+        if (errBox && errText) {
+          errText.innerText = errorMsg;
+          errBox.classList.remove('d-none');
+          errBox.classList.add('d-flex');
+        } else {
+          alert(errorMsg);
+        }
         updateBtn.disabled = false;
         updateBtn.innerHTML = '<i class="fa-solid fa-check"></i> Update Asset Changes';
         return;
       }
       location.reload();
     } catch (err) {
-      alert('Error updating machine: ' + err.message);
+      const errorMsg = 'Error updating machine: ' + err.message;
+      if (errBox && errText) {
+        errText.innerText = errorMsg;
+        errBox.classList.remove('d-none');
+        errBox.classList.add('d-flex');
+      } else {
+        alert(errorMsg);
+      }
       updateBtn.disabled = false;
       updateBtn.innerHTML = '<i class="fa-solid fa-check"></i> Update Asset Changes';
     }

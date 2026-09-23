@@ -2,6 +2,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
 
 :root {
+  color-scheme: dark;
   --bg-ink-950: #070b14;
   --bg-ink-900: #0b1120;
   --bg-ink-850: #0f172a;
@@ -1503,6 +1504,33 @@ body {
   outline: none !important;
   box-shadow: none !important;
   -moz-appearance: textfield;
+  color-scheme: dark;
+}
+
+select.telemetry-input-field,
+select.form-select,
+.form-select {
+  color-scheme: dark !important;
+  background-color: #0f172a !important;
+  color: #ffffff !important;
+}
+
+select.telemetry-input-field option,
+select.form-select option,
+.form-select option,
+select option {
+  background-color: #0f172a !important;
+  color: #f8fafc !important;
+  padding: 10px 12px !important;
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+}
+
+select option:hover,
+select option:focus,
+select option:checked {
+  background-color: #2563eb !important;
+  color: #ffffff !important;
 }
 
 .telemetry-input-field::-webkit-outer-spin-button,

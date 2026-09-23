@@ -31,13 +31,40 @@ class MachineService:
         supervisor_name: Optional[str] = None,
         supervisor_email: Optional[str] = None
     ) -> int:
-        return execute_insert(
-            """INSERT INTO machines (
-                user_id, machine_code, machine_name, department, manufacturer,
-                installation_date, status, supervisor_name, supervisor_email, created_at
-            ) VALUES (%s, %s, %s, %s, %s, %s, 'Pending Assessment', %s, %s, %s)""",
-            (user_id, machine_code.strip(), machine_name.strip(), department, manufacturer, installation_date, supervisor_name, supervisor_email, datetime.now())
-        )
+        code = (machine_code or "").strip()
+        name = (machine_name or "").strip()
+        if not code:
+            raise ValueError("Asset code / identifier is required.")
+        if not name:
+            raise ValueError("Machine model / description is required.")
+
+        # Check if asset code already exists within this user's fleet
+        if user_id is not None:
+            existing = query_one(
+                "SELECT id FROM machines WHERE user_id = %s AND LOWER(machine_code) = LOWER(%s)",
+                (user_id, code)
+            )
+        else:
+            existing = query_one(
+                "SELECT id FROM machines WHERE LOWER(machine_code) = LOWER(%s)",
+                (code,)
+            )
+
+        if existing:
+            raise ValueError(f"Asset code '{code}' already exists in your fleet. Please specify a unique machine identifier.")
+
+        try:
+            return execute_insert(
+                """INSERT INTO machines (
+                    user_id, machine_code, machine_name, department, manufacturer,
+                    installation_date, status, supervisor_name, supervisor_email, created_at
+                ) VALUES (%s, %s, %s, %s, %s, %s, 'Pending Assessment', %s, %s, %s)""",
+                (user_id, code, name, department, manufacturer, installation_date, supervisor_name, supervisor_email, datetime.now())
+            )
+        except Exception as e:
+            if "UNIQUE constraint failed" in str(e) or "Duplicate entry" in str(e):
+                raise ValueError(f"Asset code '{code}' is already registered in the system. Please use a unique machine identifier.")
+            raise
 
     @staticmethod
     def update_machine(
