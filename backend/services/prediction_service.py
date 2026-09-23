@@ -17,14 +17,21 @@ class PredictionService:
         process_temperature: float,
         rotational_speed: float,
         torque: float,
-        tool_wear: float
+        tool_wear: float,
+        user_id: Optional[int] = None
     ) -> Dict[str, Any]:
         """
         Executes end-to-end machine health prediction workflow.
+        Verifies machine ownership when user_id is provided.
         """
-        machine = query_one("SELECT * FROM machines WHERE id = %s", (machine_id,))
+        if user_id is not None:
+            machine = query_one("SELECT * FROM machines WHERE id = %s AND user_id = %s", (machine_id, user_id))
+        else:
+            machine = query_one("SELECT * FROM machines WHERE id = %s", (machine_id,))
+
         if not machine:
-            raise ValueError(f"Machine with ID {machine_id} not found.")
+            raise ValueError(f"Machine with ID {machine_id} not found or access denied.")
+
 
         # Compute rolling window statistics from recent historical predictions for this machine
         recent_records = query_all(
@@ -197,7 +204,14 @@ class PredictionService:
         return rows
 
     @staticmethod
-    def delete_history_item(item_id: int) -> bool:
-        """Deletes a historical prediction record."""
-        count = execute_update("DELETE FROM predictions WHERE id = %s", (item_id,))
+    def delete_history_item(item_id: int, user_id: Optional[int] = None) -> bool:
+        """Deletes a historical prediction record, ensuring tenant ownership if user_id is provided."""
+        if user_id is not None:
+            count = execute_update(
+                "DELETE FROM predictions WHERE id = %s AND machine_id IN (SELECT id FROM machines WHERE user_id = %s)",
+                (item_id, user_id)
+            )
+        else:
+            count = execute_update("DELETE FROM predictions WHERE id = %s", (item_id,))
         return count > 0
+

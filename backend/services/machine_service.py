@@ -14,7 +14,10 @@ class MachineService:
         return query_all("SELECT * FROM machines ORDER BY id ASC")
 
     @staticmethod
-    def get_machine_by_id(machine_id: int) -> Optional[Dict[str, Any]]:
+    def get_machine_by_id(machine_id: int, user_id: Optional[int] = None) -> Optional[Dict[str, Any]]:
+        """Retrieves a single machine, optionally verified against owner user_id."""
+        if user_id is not None:
+            return query_one("SELECT * FROM machines WHERE id = %s AND user_id = %s", (machine_id, user_id))
         return query_one("SELECT * FROM machines WHERE id = %s", (machine_id,))
 
     @staticmethod
@@ -45,8 +48,10 @@ class MachineService:
         installation_date: Optional[str] = None,
         status: Optional[str] = None,
         supervisor_name: Optional[str] = None,
-        supervisor_email: Optional[str] = None
+        supervisor_email: Optional[str] = None,
+        user_id: Optional[int] = None
     ) -> bool:
+        """Updates machine parameters, ensuring tenant isolation when user_id is specified."""
         sql = """UPDATE machines SET 
             machine_name = %s, department = %s, manufacturer = %s, 
             installation_date = %s, supervisor_name = %s, supervisor_email = %s"""
@@ -56,10 +61,18 @@ class MachineService:
             params.append(status)
         sql += " WHERE id = %s"
         params.append(machine_id)
+        if user_id is not None:
+            sql += " AND user_id = %s"
+            params.append(user_id)
         count = execute_update(sql, tuple(params))
         return count > 0
 
     @staticmethod
-    def delete_machine(machine_id: int) -> bool:
-        count = execute_update("DELETE FROM machines WHERE id = %s", (machine_id,))
+    def delete_machine(machine_id: int, user_id: Optional[int] = None) -> bool:
+        """Deletes machine asset, ensuring tenant isolation when user_id is specified."""
+        if user_id is not None:
+            count = execute_update("DELETE FROM machines WHERE id = %s AND user_id = %s", (machine_id, user_id))
+        else:
+            count = execute_update("DELETE FROM machines WHERE id = %s", (machine_id,))
         return count > 0
+

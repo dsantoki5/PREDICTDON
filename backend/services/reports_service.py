@@ -232,15 +232,21 @@ class ReportsService:
         story.append(Paragraph("Recent AI Telemetry & Prediction Audits", h2_style))
         pred_rows = [["Machine", "Speed", "Torque", "Tool Wear", "Prediction", "Risk", "Date/Time"]]
         for p in recent_preds:
+            speed = float(p.get("rotational_speed") or 0.0)
+            torque = float(p.get("torque") or 0.0)
+            tool_wear = float(p.get("tool_wear") or 0.0)
+            risk = float(p.get("probability") or 0.0)
+            pred_text = str(p.get("prediction") or "Normal")[:20]
             pred_rows.append([
-                f"{p['machine_code']}",
-                f"{p['rotational_speed']:.0f} RPM",
-                f"{p['torque']:.1f} Nm",
-                f"{p['tool_wear']:.0f} min",
-                p['prediction'][:20],
-                f"{float(p.get('probability', 0.0)):.1f}%",
-                str(p['predicted_at'])[:16]
+                f"{p.get('machine_code') or 'CNC'}",
+                f"{speed:.0f} RPM",
+                f"{torque:.1f} Nm",
+                f"{tool_wear:.0f} min",
+                pred_text,
+                f"{risk:.1f}%",
+                str(p.get("predicted_at") or "")[:16]
             ])
+
 
         pred_table = Table(pred_rows, colWidths=[0.9 * inch, 0.9 * inch, 0.9 * inch, 0.9 * inch, 1.6 * inch, 0.6 * inch, 1.1 * inch])
         pred_table.setStyle(TableStyle([

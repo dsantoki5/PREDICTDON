@@ -47,6 +47,7 @@
   </div>
 
   <!-- Telemetry History Data Table -->
+  {% set is_admin = current_user and current_user.role in ['Administrator', 'Plant Manager', 'Supervisor'] %}
   <div class="table-responsive table-scroll-7-10" style="border-radius: 12px; border: 1px solid rgba(30, 41, 59, 0.7); background: rgba(11, 17, 32, 0.65);">
     <table class="table-cnc" id="historyTable">
       <thead>
@@ -59,7 +60,7 @@
           <th>TORQUE</th>
           <th>TOOL WEAR</th>
           <th>PREDICTION</th>
-          <th>PROBABILITY</th>
+          <th>FAILURE RISK</th>
           <th>TIMESTAMP</th>
           <th class="text-end">ACTION</th>
         </tr>
@@ -139,9 +140,15 @@
 
           <!-- Delete Action -->
           <td class="text-end">
+            {% if is_admin %}
             <button class="action-btn-icon btn-danger-action" title="Delete Record" onclick="deleteHistoryRecord({{ h.id }})">
               <i class="fa-solid fa-trash"></i>
             </button>
+            {% else %}
+            <span class="text-secondary" style="opacity: 0.35;" title="Supervisor authorization required to delete telemetry logs">
+              <i class="fa-solid fa-lock" style="font-size: 0.8rem;"></i>
+            </span>
+            {% endif %}
           </td>
         </tr>
         {% else %}

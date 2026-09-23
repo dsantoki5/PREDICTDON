@@ -3,6 +3,7 @@
 {% block title %}Machine Directory — PredictCNC AI Platform{% endblock %}
 
 {% block content %}
+{% set is_admin = current_user and current_user.role in ['Administrator', 'Plant Manager', 'Supervisor'] %}
 <!-- Main Glassmorphic Panel (Matching Dashboard, Maintenance & History) -->
 <div class="dashboard-main-card">
 
@@ -20,14 +21,38 @@
       </p>
     </div>
     
-    <!-- Top Action Buttons -->
+    <!-- Top Action Buttons & RBAC Status -->
     <div class="d-flex align-items-center gap-2 flex-wrap">
+      {% if is_admin %}
       <button type="button" class="btn btn-login-submit py-2 px-3.5 d-flex align-items-center gap-2 shadow" style="font-size: 0.84rem;" data-bs-toggle="modal" data-bs-target="#addMachineModal">
         <i class="fa-solid fa-plus" style="font-size: 0.9rem;"></i>
         <span>Register CNC Machine</span>
       </button>
+      {% else %}
+      <div class="d-flex align-items-center gap-2">
+        <span class="badge py-2 px-3 rounded-pill font-mono d-flex align-items-center gap-1.5" style="background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4); font-size: 0.78rem;">
+          <i class="fa-solid fa-shield-halved"></i>
+          <span>Operator Mode (Telemetry View Only)</span>
+        </span>
+        <button type="button" class="btn btn-cnc-outline py-1.5 px-3 font-mono" style="font-size: 0.76rem;" onclick="showOperatorAlert()">
+          <i class="fa-solid fa-circle-info me-1"></i> Permissions
+        </button>
+      </div>
+      {% endif %}
     </div>
   </div>
+
+  {% if not is_admin %}
+  <!-- Operator RBAC Notice Banner -->
+  <div class="alert alert-info border-0 rounded-3 mb-4 p-3 d-flex align-items-start gap-3" style="background: rgba(14, 165, 233, 0.1); border-left: 4px solid #38bdf8 !important;">
+    <i class="fa-solid fa-circle-info fs-5 mt-0.5" style="color: #38bdf8;"></i>
+    <div style="font-size: 0.84rem;">
+      <strong class="text-white">Operator Telemetry Access Active:</strong>
+      <span class="text-secondary">You are logged in as a Factory Operator (<code class="text-info">{{ current_user.username if current_user else 'Operator' }}</code>). You have full access to view asset specifications, sensor logs, and run AI condition predictions. Asset creation, configuration updates, and decommissioning require Supervisor or Administrator authorization.</span>
+    </div>
+  </div>
+  {% endif %}
+
 
   <!-- Row 1: Fleet Quick KPI Stats -->
   <div class="row g-3 mb-4">
@@ -206,12 +231,18 @@
                 <a href="{{ url_for('predict_page') }}?machine_id={{ m.id }}" class="action-btn-icon" style="color: #38bdf8;" title="Execute AI Inference">
                   <i class="fa-solid fa-bolt"></i>
                 </a>
+                {% if is_admin %}
                 <button type="button" class="action-btn-icon" title="Edit Machine Asset" onclick="openEditModal({{ m.id }}, '{{ m.machine_code }}', '{{ m.machine_name }}', '{{ m.department or '' }}', '{{ m.manufacturer or '' }}', '{{ m.supervisor_name or '' }}', '{{ m.supervisor_email or '' }}')">
                   <i class="fa-solid fa-pen-to-square"></i>
                 </button>
                 <button type="button" class="action-btn-icon btn-danger-action" title="Delete Asset" onclick="deleteMachine({{ m.id }}, '{{ m.machine_code }}')">
                   <i class="fa-solid fa-trash"></i>
                 </button>
+                {% else %}
+                <button type="button" class="action-btn-icon text-secondary" style="opacity: 0.45; cursor: pointer;" title="Supervisor authorization required for modifications" onclick="showOperatorAlert()">
+                  <i class="fa-solid fa-lock"></i>
+                </button>
+                {% endif %}
               </div>
             </td>
           </tr>
@@ -227,14 +258,21 @@
                 <p class="text-secondary mx-auto mb-4" style="max-width: 520px; font-size: 0.88rem; line-height: 1.5;">
                   Your fleet starts completely clean. Add your first CNC machine asset to enable multi-sensor telemetry evaluation, LightGBM failure diagnostics, and real-time Gmail SMTP supervisor alerts.
                 </p>
+                {% if is_admin %}
                 <button type="button" class="btn btn-login-submit py-2.5 px-4 d-inline-flex align-items-center gap-2 shadow" style="font-size: 0.88rem;" data-bs-toggle="modal" data-bs-target="#addMachineModal">
                   <i class="fa-solid fa-plus"></i>
                   <span>Register Your First CNC Machine</span>
                 </button>
+                {% else %}
+                <p class="font-mono text-warning" style="font-size: 0.82rem;">
+                  <i class="fa-solid fa-lock me-1"></i> Contact your Plant Supervisor or Administrator to register machinery assets to this tenant.
+                </p>
+                {% endif %}
               </div>
             </td>
           </tr>
           {% endfor %}
+
         </tbody>
       </table>
     </div>
@@ -599,7 +637,12 @@
     try {
       const res = await fetch(`/api/machines/${id}`, { method: 'DELETE' });
       if (!res.ok) {
-        alert('Failed to delete.');
+        if (res.status === 403) {
+          showOperatorAlert();
+          return;
+        }
+        const errData = await res.json().catch(() => ({}));
+        alert(errData.detail || 'Failed to delete CNC asset.');
         return;
       }
       location.reload();
@@ -607,6 +650,58 @@
       alert('Error: ' + err.message);
     }
   }
+
+  function showOperatorAlert() {
+    const modalEl = document.getElementById('operatorRbacModal');
+    if (modalEl) {
+      const modal = new bootstrap.Modal(modalEl);
+      modal.show();
+    } else {
+      alert("Administrative Authorization Required: Only Supervisors and Plant Administrators can create, modify, or decommission CNC machines. Operator accounts have telemetry view and AI prediction access only.");
+    }
+  }
 </script>
+
+<!-- Operator RBAC Alert Modal -->
+<div class="modal fade" id="operatorRbacModal" tabindex="-1" aria-labelledby="operatorRbacModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content card-cnc" style="background: rgba(15, 23, 42, 0.98); border: 1px solid rgba(245, 158, 11, 0.5); border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.8), 0 0 30px rgba(245, 158, 11, 0.15);">
+      <div class="modal-header border-bottom border-secondary border-opacity-25 pb-3">
+        <div class="d-flex align-items-center gap-2.5">
+          <div class="rounded-circle d-flex align-items-center justify-content-center" style="width: 38px; height: 38px; background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4);">
+            <i class="fa-solid fa-shield-halved fs-6"></i>
+          </div>
+          <div>
+            <h5 class="modal-title font-display fw-bold text-white mb-0" id="operatorRbacModalLabel" style="font-size: 1.05rem;">Administrative Authorization Required</h5>
+            <div class="font-mono text-secondary" style="font-size: 0.72rem;">Role-Based Access Control (RBAC) Protection</div>
+          </div>
+        </div>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body py-4 font-sans text-secondary" style="font-size: 0.88rem; line-height: 1.6;">
+        <p class="text-white mb-2">
+          Your current user session is authenticated under the <strong>Factory Worker / Operator</strong> tier.
+        </p>
+        <p class="mb-3">
+          To maintain plant safety, machine configuration integrity, and compliance audits, modifying CNC specifications or deleting assets is restricted to authorized roles:
+        </p>
+        <div class="d-flex flex-wrap gap-2 mb-3">
+          <span class="badge px-2.5 py-1 rounded font-mono" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.35);">Administrator</span>
+          <span class="badge px-2.5 py-1 rounded font-mono" style="background: rgba(52, 211, 153, 0.15); color: #34d399; border: 1px solid rgba(52, 211, 153, 0.35);">Plant Manager</span>
+          <span class="badge px-2.5 py-1 rounded font-mono" style="background: rgba(168, 85, 247, 0.15); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.35);">Supervisor</span>
+        </div>
+        <div class="p-2.5 rounded font-mono" style="background: rgba(2, 6, 23, 0.6); border: 1px solid rgba(51, 65, 85, 0.6); font-size: 0.78rem;">
+          <i class="fa-solid fa-circle-check text-success me-1"></i> <strong>Permitted for Operators:</strong> You can freely inspect live telemetry parameters, execute LightGBM health predictions, and create maintenance inspection work orders.
+        </div>
+      </div>
+      <div class="modal-footer border-top border-secondary border-opacity-25 pt-3">
+        <button type="button" class="btn btn-login-submit py-1.5 px-3.5 font-mono" style="font-size: 0.8rem;" data-bs-dismiss="modal">
+          Acknowledge & Close
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}
+
 

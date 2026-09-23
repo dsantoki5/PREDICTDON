@@ -6,13 +6,24 @@ import os
 import sqlite3
 import logging
 from datetime import datetime, timezone
-import pymysql
-from pymysql.cursors import DictCursor
-from dotenv import load_dotenv
+try:
+    import pymysql
+    from pymysql.cursors import DictCursor
+except ImportError:
+    pymysql = None
+    DictCursor = None
+
+try:
+    from dotenv import load_dotenv
+except ImportError:
+    def load_dotenv(*args, **kwargs):
+        pass
 
 # Load environment variables
 backend_dir = os.path.dirname(os.path.abspath(__file__))
-load_dotenv(os.path.join(backend_dir, ".env"))
+if load_dotenv:
+    load_dotenv(os.path.join(backend_dir, ".env"))
+
 
 logger = logging.getLogger("predictcnc.db")
 
@@ -247,6 +258,21 @@ def init_db():
                     FOREIGN KEY (machine_id) REFERENCES machines(id) ON DELETE CASCADE
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
                 """)
+
+                cur.execute("""
+                CREATE TABLE IF NOT EXISTS security_audit_logs (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    user_id INT NULL,
+                    username VARCHAR(50) NULL,
+                    user_role VARCHAR(50) NULL,
+                    action VARCHAR(100) NOT NULL,
+                    target_resource VARCHAR(100) NULL,
+                    ip_address VARCHAR(50) NULL,
+                    status VARCHAR(20) NOT NULL,
+                    details TEXT NULL,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+                """)
         else:
             cur = conn.cursor()
             cur.execute("""
@@ -331,6 +357,21 @@ def init_db():
             );
             """)
 
+            cur.execute("""
+            CREATE TABLE IF NOT EXISTS security_audit_logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NULL,
+                username VARCHAR(50) NULL,
+                user_role VARCHAR(50) NULL,
+                action VARCHAR(100) NOT NULL,
+                target_resource VARCHAR(100) NULL,
+                ip_address VARCHAR(50) NULL,
+                status VARCHAR(20) NOT NULL,
+                details TEXT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+            """)
+
             # Ensure all columns exist in machines table (schema evolution)
             machine_cols = {row[1] for row in cur.execute("PRAGMA table_info(machines)").fetchall()}
             if "user_id" not in machine_cols:
@@ -344,8 +385,14 @@ def init_db():
     finally:
         conn.close()
 
+    # Re-associate any orphaned machines (user_id IS NULL) with Administrator account (id=1)
+    try:
+        execute_update("UPDATE machines SET user_id = 1 WHERE user_id IS NULL")
+    except Exception as e:
+        logger.warning(f"Orphaned machine fleet migration notice: {e}")
+
 def seed_default_data():
-    """Seeds default admin user and initial machine fleet if empty."""
+    """Seeds default admin user and initial machine fleet if empty, and synchronizes admin credentials."""
     init_db()
     users_count = query_one("SELECT COUNT(*) as count FROM users")
     if not users_count or users_count['count'] == 0:
@@ -371,3 +418,8 @@ def seed_default_data():
                 (admin_id, code, name, dept, mfg, inst_date, status, sup_name, sup_email)
             )
         logger.info("Default seed data loaded into database.")
+    else:
+        # Ensure default 'admin' account password matches 'admin123' as documented in README.md
+        import hashlib
+        expected_hash = hashlib.sha256("admin123".encode()).hexdigest()
+        execute_update("UPDATE users SET password = %s WHERE LOWER(username) = 'admin' AND password != %s", (expected_hash, expected_hash))

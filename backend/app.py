@@ -16,7 +16,7 @@ if backend_dir not in sys.path:
 
 load_dotenv(os.path.join(backend_dir, ".env"))
 
-from db import init_db, seed_default_data, query_all, query_one
+from db import init_db, seed_default_data, query_all, query_one, execute_insert
 from services.auth_service import AuthService
 from services.machine_service import MachineService
 from services.prediction_service import PredictionService
@@ -31,22 +31,82 @@ app = Flask(
 )
 app.secret_key = os.getenv("SECRET_KEY", "predictcnc-academic-session-key-2026")
 
+# Authoritative Administrative Roles allowed to modify machinery assets and telemetry archives
+ADMIN_ROLES = ("Administrator", "Plant Manager", "Supervisor")
+
 # Initialize database schema and seeds
 with app.app_context():
     seed_default_data()
 
 # ---------------------------------------------------------------------
-# Authentication Decorator
+# Authentication & Role-Based Access Control (RBAC) Decorators
 # ---------------------------------------------------------------------
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if "user_id" not in session:
             if request.path.startswith("/api/"):
-                return jsonify({"detail": "Authentication required. Please log in."}), 401
+                return jsonify({"status": "unauthorized", "detail": "Authentication required. Please log in."}), 401
             return redirect(url_for("login_page"))
         return f(*args, **kwargs)
     return decorated_function
+
+def log_security_event(user_id, username, user_role, action, target_resource, ip_address, status, details):
+    """Logs security audit records to security_audit_logs table."""
+    try:
+        execute_insert(
+            """INSERT INTO security_audit_logs (user_id, username, user_role, action, target_resource, ip_address, status, details, created_at)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)""",
+            (user_id, username, user_role, action, target_resource, ip_address, status, details, datetime.now())
+        )
+    except Exception as e:
+        app.logger.warning(f"Failed to record security audit log: {e}")
+
+def roles_required(*allowed_roles):
+    """
+    RBAC decorator that restricts endpoint access to specified roles.
+    Logs unauthorized modification attempts to security_audit_logs.
+    """
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            if "user_id" not in session:
+                if request.path.startswith("/api/"):
+                    return jsonify({"status": "unauthorized", "detail": "Authentication required. Please log in."}), 401
+                return redirect(url_for("login_page"))
+
+            user = session.get("user") or {}
+            user_role = user.get("role", "Operator")
+            if user_role not in allowed_roles:
+                # Log security incident to security_audit_logs
+                log_security_event(
+                    user_id=session.get("user_id"),
+                    username=user.get("username", "anonymous"),
+                    user_role=user_role,
+                    action=request.method,
+                    target_resource=request.path,
+                    ip_address=request.remote_addr or "127.0.0.1",
+                    status="DENIED",
+                    details=f"Role '{user_role}' denied administrative access. Required: {list(allowed_roles)}."
+                )
+
+                if request.path.startswith("/api/"):
+                    return jsonify({
+                        "status": "access_denied",
+                        "error_code": "INSUFFICIENT_ROLE_PERMISSIONS",
+                        "detail": f"Access Denied: Your assigned role ('{user_role}') does not have administrative permission for this action. Authorized roles: {', '.join(allowed_roles)}.",
+                        "required_roles": list(allowed_roles),
+                        "user_role": user_role
+                    }), 403
+
+                flash(f"Access Denied: Role '{user_role}' does not have permission to perform this administrative modification.", "danger")
+                return redirect(url_for("dashboard_page"))
+
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
+
+
 
 # Context processor for templates
 @app.context_processor
@@ -68,6 +128,8 @@ def index():
 
 @app.route("/login", methods=["GET", "POST"])
 def login_page():
+    if "user_id" in session:
+        return redirect(url_for("dashboard_page"))
     if request.method == "POST":
         company_name = request.form.get("company_name", "").strip()
         username = request.form.get("username", "").strip()
@@ -90,7 +152,10 @@ def login_page():
 
 @app.route("/register", methods=["GET", "POST"])
 def register_page():
+    if "user_id" in session:
+        return redirect(url_for("dashboard_page"))
     if request.method == "POST":
+
         company = request.form.get("company_name", "").strip()
         name = request.form.get("admin_name", "").strip()
         email = request.form.get("email", "").strip()
@@ -225,6 +290,21 @@ def api_reset_password():
     except Exception as e:
         return jsonify({"detail": str(e)}), 400
 
+@app.route("/api/auth/change-password", methods=["POST"])
+@login_required
+def api_change_password():
+    """Secure password change requiring verification of current password."""
+    data = request.get_json() or {}
+    current_pwd = data.get("current_password", "").strip()
+    new_pwd = data.get("new_password", "").strip()
+    if not current_pwd or not new_pwd:
+        return jsonify({"detail": "Current password and new password are required."}), 400
+    try:
+        AuthService.change_password(session["user_id"], current_pwd, new_pwd)
+        return jsonify({"message": "Password changed successfully."})
+    except Exception as e:
+        return jsonify({"detail": str(e)}), 400
+
 @app.route("/api/auth/logout", methods=["POST"])
 def api_logout():
     session.clear()
@@ -240,6 +320,27 @@ def api_me():
 def api_machines():
     user_id = session.get("user_id")
     if request.method == "POST":
+        user = session.get("user") or {}
+        user_role = user.get("role", "Operator")
+        if user_role not in ADMIN_ROLES:
+            log_security_event(
+                user_id=user_id,
+                username=user.get("username", "anonymous"),
+                user_role=user_role,
+                action="POST",
+                target_resource="/api/machines",
+                ip_address=request.remote_addr or "127.0.0.1",
+                status="DENIED",
+                details=f"Role '{user_role}' denied machine creation."
+            )
+            return jsonify({
+                "status": "access_denied",
+                "error_code": "INSUFFICIENT_ROLE_PERMISSIONS",
+                "detail": f"Access Denied: Your assigned role ('{user_role}') does not have administrative permission to register CNC machine assets. Please contact your Plant Supervisor.",
+                "required_roles": list(ADMIN_ROLES),
+                "user_role": user_role
+            }), 403
+
         data = request.get_json() or {}
         try:
             m_id = MachineService.create_machine(
@@ -262,13 +363,37 @@ def api_machines():
 @app.route("/api/machines/<int:machine_id>", methods=["GET", "PUT", "DELETE"])
 @login_required
 def api_machine_detail(machine_id):
+    user_id = session.get("user_id")
     if request.method == "GET":
-        m = MachineService.get_machine_by_id(machine_id)
+        m = MachineService.get_machine_by_id(machine_id, user_id=user_id)
         if not m:
             return jsonify({"detail": "Machine not found"}), 404
         return jsonify(m)
 
-    elif request.method == "PUT":
+    # For modifications, verify administrative role
+    user = session.get("user") or {}
+    user_role = user.get("role", "Operator")
+    if user_role not in ADMIN_ROLES:
+        log_security_event(
+            user_id=user_id,
+            username=user.get("username", "anonymous"),
+            user_role=user_role,
+            action=request.method,
+            target_resource=f"/api/machines/{machine_id}",
+            ip_address=request.remote_addr or "127.0.0.1",
+            status="DENIED",
+            details=f"Role '{user_role}' denied machine modification."
+        )
+        return jsonify({
+            "status": "access_denied",
+            "error_code": "INSUFFICIENT_ROLE_PERMISSIONS",
+            "detail": f"Access Denied: Your assigned role ('{user_role}') does not have administrative permission to modify or decommission CNC machine assets.",
+            "required_roles": list(ADMIN_ROLES),
+            "user_role": user_role
+        }), 403
+
+
+    if request.method == "PUT":
         data = request.get_json() or {}
         success = MachineService.update_machine(
             machine_id=machine_id,
@@ -278,16 +403,17 @@ def api_machine_detail(machine_id):
             installation_date=data.get("installation_date"),
             status=data.get("status"),
             supervisor_name=data.get("supervisor_name"),
-            supervisor_email=data.get("supervisor_email")
+            supervisor_email=data.get("supervisor_email"),
+            user_id=user_id
         )
         if not success:
-            return jsonify({"detail": "Machine not found or update failed"}), 404
+            return jsonify({"detail": "Machine not found or update unauthorized"}), 404
         return jsonify({"message": "Machine updated successfully"})
 
     elif request.method == "DELETE":
-        success = MachineService.delete_machine(machine_id)
+        success = MachineService.delete_machine(machine_id, user_id=user_id)
         if not success:
-            return jsonify({"detail": "Machine not found"}), 404
+            return jsonify({"detail": "Machine not found or deletion unauthorized"}), 404
         return jsonify({"message": "Machine deleted successfully"})
 
 @app.route("/api/predict", methods=["POST"])
@@ -295,9 +421,11 @@ def api_machine_detail(machine_id):
 def api_predict():
     """
     Core AI prediction endpoint.
-    Runs LightGBM inference, persists to MySQL, and triggers Gmail SMTP alert.
+    Runs LightGBM inference, persists to database, and triggers Gmail SMTP alert.
+    Enforces machine ownership.
     """
     data = request.get_json() or {}
+    user_id = session.get("user_id")
     try:
         machine_id = int(data.get("machine_id", 0))
         air_t = float(data.get("air_temperature", 298.0))
@@ -312,7 +440,8 @@ def api_predict():
             process_temperature=proc_t,
             rotational_speed=rpm,
             torque=torque,
-            tool_wear=tool_wear
+            tool_wear=tool_wear,
+            user_id=user_id
         )
         return jsonify(result), 200
     except ValueError as ve:
@@ -332,15 +461,18 @@ def api_history():
 
 @app.route("/api/history/<int:item_id>", methods=["DELETE"])
 @login_required
+@roles_required(*ADMIN_ROLES)
 def api_delete_history(item_id):
-    success = PredictionService.delete_history_item(item_id)
+    user_id = session.get("user_id")
+    success = PredictionService.delete_history_item(item_id, user_id=user_id)
     if not success:
-        return jsonify({"detail": "History record not found"}), 404
+        return jsonify({"detail": "History record not found or access denied"}), 404
     return jsonify({"message": "History record deleted successfully"})
 
 @app.route("/api/maintenance", methods=["GET", "POST"])
 @login_required
 def api_maintenance():
+    user_id = session.get("user_id")
     if request.method == "POST":
         data = request.get_json() or {}
         try:
@@ -348,34 +480,61 @@ def api_maintenance():
                 machine_id=int(data["machine_id"]),
                 priority=data.get("priority", "Medium"),
                 remarks=data.get("remarks"),
-                prediction_id=data.get("prediction_id")
+                prediction_id=data.get("prediction_id"),
+                user_id=user_id
             )
             return jsonify({"id": t_id, "message": "Ticket created successfully"}), 201
         except Exception as e:
             return jsonify({"detail": str(e)}), 400
 
-    tickets = MaintenanceService.get_all_tickets(session.get("user_id"))
+    tickets = MaintenanceService.get_all_tickets(user_id)
     return jsonify(tickets)
 
 @app.route("/api/maintenance/<int:ticket_id>", methods=["PUT", "DELETE"])
 @login_required
 def api_maintenance_detail(ticket_id):
+    user_id = session.get("user_id")
     if request.method == "PUT":
         data = request.get_json() or {}
         success = MaintenanceService.update_ticket_status(
             ticket_id=ticket_id,
             status=data.get("status", "Pending"),
-            remarks=data.get("remarks")
+            remarks=data.get("remarks"),
+            user_id=user_id
         )
         if not success:
-            return jsonify({"detail": "Ticket not found"}), 404
+            return jsonify({"detail": "Ticket not found or update unauthorized"}), 404
         return jsonify({"message": "Ticket updated successfully"})
 
     elif request.method == "DELETE":
-        success = MaintenanceService.delete_ticket(ticket_id)
+        user = session.get("user") or {}
+        user_role = user.get("role", "Operator")
+        if user_role not in ADMIN_ROLES:
+            return jsonify({
+                "status": "access_denied",
+                "error_code": "INSUFFICIENT_ROLE_PERMISSIONS",
+                "detail": f"Access Denied: Role '{user_role}' cannot delete maintenance work orders.",
+                "required_roles": list(ADMIN_ROLES),
+                "user_role": user_role
+            }), 403
+
+        success = MaintenanceService.delete_ticket(ticket_id, user_id=user_id)
         if not success:
-            return jsonify({"detail": "Ticket not found"}), 404
+            return jsonify({"detail": "Ticket not found or deletion unauthorized"}), 404
         return jsonify({"message": "Ticket deleted successfully"})
+
+@app.route("/api/security/audit-logs")
+@login_required
+@roles_required(*ADMIN_ROLES)
+def api_security_audit_logs():
+    """Returns security audit events for compliance review."""
+    user_id = session.get("user_id")
+    logs = query_all(
+        "SELECT * FROM security_audit_logs WHERE user_id = %s ORDER BY created_at DESC LIMIT 100",
+        (user_id,)
+    )
+    return jsonify(logs)
+
 
 @app.route("/api/reports/metrics")
 @login_required

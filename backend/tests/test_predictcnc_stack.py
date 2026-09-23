@@ -416,7 +416,155 @@ class TestPredictCNCStack(unittest.TestCase):
         MachineService.delete_machine(m_id)
         print(" -> TEST 12 (Machine Initial Status Lifecycle): PASS")
 
+    # -----------------------------------------------------------------
+    # TEST 13: RBAC Operator Restrictions & Audit Logging
+    # -----------------------------------------------------------------
+    def test_13_rbac_operator_restrictions(self):
+        """Test 13: Factory Operator role cannot create/edit/delete machines (403 Forbidden + Audit Log)."""
+        operator_client = app.test_client()
+        with operator_client.session_transaction() as sess:
+            sess["user_id"] = 999
+            sess["user"] = {
+                "id": 999,
+                "username": "worker_john",
+                "admin_name": "John Doe",
+                "company_name": "ShopFloor Precision",
+                "email": "john@shopfloor.local",
+                "role": "Operator"
+            }
+
+        # 1. Attempt machine creation -> 403 Forbidden
+        res_create = operator_client.post("/api/machines", json={
+            "machine_code": "OP-DENIED-01",
+            "machine_name": "Unauthorized Mill"
+        })
+        self.assertEqual(res_create.status_code, 403)
+        data_create = res_create.get_json()
+        self.assertEqual(data_create["status"], "access_denied")
+        self.assertEqual(data_create["error_code"], "INSUFFICIENT_ROLE_PERMISSIONS")
+        self.assertIn("Operator", data_create["detail"])
+
+        # 2. Attempt machine update -> 403 Forbidden
+        res_update = operator_client.put(f"/api/machines/{self.test_machine_id}", json={
+            "machine_name": "Hacked Mill"
+        })
+        self.assertEqual(res_update.status_code, 403)
+
+        # 3. Attempt machine deletion -> 403 Forbidden
+        res_delete = operator_client.delete(f"/api/machines/{self.test_machine_id}")
+        self.assertEqual(res_delete.status_code, 403)
+
+        # 4. Verify security incident was recorded in security_audit_logs
+        incident = query_one(
+            "SELECT * FROM security_audit_logs WHERE user_id = 999 AND status = 'DENIED' ORDER BY id DESC LIMIT 1"
+        )
+        self.assertIsNotNone(incident)
+        self.assertIn("Operator", incident["details"])
+        print(" -> TEST 13 (RBAC Operator Restrictions & Audit Logging): PASS")
+
+    # -----------------------------------------------------------------
+    # TEST 14: Multi-Tenant Machine IDOR Prevention
+    # -----------------------------------------------------------------
+    def test_14_idor_cross_tenant_isolation(self):
+        """Test 14: Tenant B cannot update, delete, or run predictions on Tenant A's machine."""
+        tenant_b_client = app.test_client()
+        with tenant_b_client.session_transaction() as sess:
+            sess["user_id"] = 888
+            sess["user"] = {
+                "id": 888,
+                "username": "tenant_b_admin",
+                "admin_name": "Tenant B Admin",
+                "company_name": "Company B",
+                "email": "admin@companyb.local",
+                "role": "Administrator"
+            }
+
+        # Attempt to modify machine belonging to user_id=1
+        res_update = tenant_b_client.put(f"/api/machines/{self.test_machine_id}", json={
+            "machine_name": "Hostile Takeover"
+        })
+        self.assertEqual(res_update.status_code, 404)
+
+        # Attempt to delete machine belonging to user_id=1
+        res_delete = tenant_b_client.delete(f"/api/machines/{self.test_machine_id}")
+        self.assertEqual(res_delete.status_code, 404)
+
+        # Attempt to run prediction on machine belonging to user_id=1
+        res_pred = tenant_b_client.post("/api/predict", json={
+            "machine_id": self.test_machine_id,
+            "air_temperature": 298.15,
+            "process_temperature": 308.15,
+            "rotational_speed": 1500,
+            "torque": 40.0,
+            "tool_wear": 50
+        })
+        self.assertEqual(res_pred.status_code, 400)
+        self.assertIn("access denied", res_pred.get_json()["detail"].lower())
+        print(" -> TEST 14 (Multi-Tenant Machine IDOR Prevention): PASS")
+
+    # -----------------------------------------------------------------
+    # TEST 15: Password Hashing & Secure Password Change
+    # -----------------------------------------------------------------
+    def test_15_password_hashing_and_change(self):
+        """Test 15: Werkzeug password hashing verification and secure password change."""
+        import time
+        ts = int(time.time())
+        uname = f"pwdtest_{ts}"
+        uid = AuthService.register_user("Security Labs", "Sec Lead", f"{uname}@test.com", uname, "InitialPass@123")
+        
+        # Verify user hash is modern Werkzeug format
+        u = AuthService.get_user_by_id(uid)
+        self.assertTrue(u["password"].startswith("scrypt:") or u["password"].startswith("pbkdf2:"))
+
+        # Authenticate succeeds
+        self.assertIsNotNone(AuthService.authenticate_user(uname, "InitialPass@123"))
+
+        # Wrong old password fails change
+        with self.assertRaises(ValueError):
+            AuthService.change_password(uid, "WrongPassword", "NewSecurePass@456")
+
+        # Correct old password succeeds change
+        self.assertTrue(AuthService.change_password(uid, "InitialPass@123", "NewSecurePass@456"))
+
+        # Old password no longer works
+        self.assertIsNone(AuthService.authenticate_user(uname, "InitialPass@123"))
+
+        # New password works
+        self.assertIsNotNone(AuthService.authenticate_user(uname, "NewSecurePass@456"))
+
+        # Clean up
+        execute_update("DELETE FROM users WHERE id = %s", (uid,))
+        print(" -> TEST 15 (Password Hashing & Secure Password Change): PASS")
+
+    # -----------------------------------------------------------------
+    # TEST 16: PDF Report Null-Safety Coalescing
+    # -----------------------------------------------------------------
+    def test_16_pdf_null_coalescing(self):
+        """Test 16: ReportsService.generate_pdf_report handles None telemetry values safely."""
+        # Insert a dummy prediction record with None nullable values
+        pred_id = execute_insert(
+            """INSERT INTO predictions (
+                machine_id, air_temperature, process_temperature, rotational_speed, torque, tool_wear,
+                load_density, rpm_torque_interaction, temperature_difference, temperature_ratio, load_stress,
+                prediction, predicted_class, model_version, probability, confidence, predicted_at
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
+            (
+                self.test_machine_id, 298.0, 308.0, 1500.0, 40.0, 10.0,
+                None, None, None, None, None,
+                "Normal Operation", 0, "Test Model", 15.0, None, datetime.now()
+            )
+        )
+        pdf_buf = ReportsService.generate_pdf_report(user_id=1)
+        self.assertIsNotNone(pdf_buf)
+        self.assertGreater(len(pdf_buf.getvalue()), 1000)
+
+        # Clean up
+        execute_update("DELETE FROM predictions WHERE id = %s", (pred_id,))
+        print(" -> TEST 16 (PDF Report Null-Safety Coalescing): PASS")
+
+
 if __name__ == "__main__":
     unittest.main()
+
 
 

@@ -76,7 +76,7 @@
               <div class="text-secondary font-sans" style="font-size: 0.72rem;">Enter real-time or manual values from machine sensors</div>
             </div>
           </div>
-          <button type="button" class="btn btn-sm btn-cnc-primary py-1 px-2.5 font-mono" style="font-size: 0.74rem;" onclick="applyPreset('normal')">
+          <button type="button" id="useLatestDataBtn" class="btn btn-sm btn-cnc-primary py-1 px-2.5 font-mono" style="font-size: 0.74rem;" onclick="loadLatestMachineTelemetry()">
             <i class="fa-solid fa-bolt me-1"></i> Use Latest Data
           </button>
         </div>
@@ -498,6 +498,55 @@
     }
   }
 
+  async function loadLatestMachineTelemetry() {
+    const machineSelect = document.getElementById('machineSelect');
+    const machineId = machineSelect ? parseInt(machineSelect.value) : NaN;
+    if (!machineId || isNaN(machineId)) {
+      alert('Please select a CNC machine first.');
+      return;
+    }
+
+    const btn = document.getElementById('useLatestDataBtn');
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> Fetching...';
+    }
+
+    try {
+      const res = await fetch(`/api/history?machine_id=${machineId}&limit=1`);
+      const records = await res.json();
+      if (records && records.length > 0) {
+        const latest = records[0];
+        document.getElementById('num_air_temp').value = parseFloat(latest.air_temperature).toFixed(2);
+        document.getElementById('num_process_temp').value = parseFloat(latest.process_temperature).toFixed(2);
+        document.getElementById('num_rotational_speed').value = Math.round(parseFloat(latest.rotational_speed));
+        document.getElementById('num_torque').value = parseFloat(latest.torque).toFixed(1);
+        document.getElementById('num_tool_wear').value = Math.round(parseFloat(latest.tool_wear));
+
+        const banner = document.getElementById('machineInfoBanner');
+        if (banner) {
+          banner.style.borderColor = '#38bdf8';
+          banner.style.boxShadow = '0 0 15px rgba(56, 189, 248, 0.4)';
+          setTimeout(() => {
+            banner.style.borderColor = 'rgba(51, 65, 85, 0.5)';
+            banner.style.boxShadow = 'none';
+          }, 1800);
+        }
+      } else {
+        applyPreset('normal');
+        alert('No historical telemetry recorded yet for this asset. Loaded nominal operating parameters as baseline.');
+      }
+    } catch (err) {
+      console.error("Telemetry fetch error:", err);
+      applyPreset('normal');
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-bolt me-1"></i> Use Latest Data';
+      }
+    }
+  }
+
   function applyPreset(type) {
     if (type === 'normal') {
       document.getElementById('num_air_temp').value = 298.15;
@@ -519,6 +568,7 @@
       document.getElementById('num_tool_wear').value = 240;
     }
   }
+
 
   async function handlePrediction(e) {
     e.preventDefault();

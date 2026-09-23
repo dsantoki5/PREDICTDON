@@ -26,15 +26,20 @@ class MaintenanceService:
         machine_id: int,
         priority: str = "Medium",
         remarks: Optional[str] = None,
-        prediction_id: Optional[int] = None
+        prediction_id: Optional[int] = None,
+        user_id: Optional[int] = None
     ) -> int:
+        if user_id is not None:
+            machine = query_one("SELECT id FROM machines WHERE id = %s AND user_id = %s", (machine_id, user_id))
+            if not machine:
+                raise ValueError(f"Machine with ID {machine_id} not found or access denied.")
         return execute_insert(
             "INSERT INTO maintenance (machine_id, prediction_id, priority, status, remarks, created_at) VALUES (%s, %s, %s, 'Pending', %s, %s)",
             (machine_id, prediction_id, priority, remarks, datetime.now())
         )
 
     @staticmethod
-    def update_ticket_status(ticket_id: int, status: str, remarks: Optional[str] = None) -> bool:
+    def update_ticket_status(ticket_id: int, status: str, remarks: Optional[str] = None, user_id: Optional[int] = None) -> bool:
         sql = "UPDATE maintenance SET status = %s"
         params = [status]
         if remarks is not None:
@@ -42,10 +47,20 @@ class MaintenanceService:
             params.append(remarks)
         sql += " WHERE id = %s"
         params.append(ticket_id)
+        if user_id is not None:
+            sql += " AND machine_id IN (SELECT id FROM machines WHERE user_id = %s)"
+            params.append(user_id)
         count = execute_update(sql, tuple(params))
         return count > 0
 
     @staticmethod
-    def delete_ticket(ticket_id: int) -> bool:
-        count = execute_update("DELETE FROM maintenance WHERE id = %s", (ticket_id,))
+    def delete_ticket(ticket_id: int, user_id: Optional[int] = None) -> bool:
+        if user_id is not None:
+            count = execute_update(
+                "DELETE FROM maintenance WHERE id = %s AND machine_id IN (SELECT id FROM machines WHERE user_id = %s)",
+                (ticket_id, user_id)
+            )
+        else:
+            count = execute_update("DELETE FROM maintenance WHERE id = %s", (ticket_id,))
         return count > 0
+

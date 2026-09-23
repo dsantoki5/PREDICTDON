@@ -4,12 +4,20 @@ Encapsulates model loading, validation, multi-class inference, and Root Cause An
 Authoritative Model: LightGBM_No_SMOTE_Final.joblib.
 """
 import os
+import sys
 from pathlib import Path
+
+# Ensure project root is in sys.path for robust cross-environment imports
+_proj_root = str(Path(__file__).resolve().parents[2])
+if _proj_root not in sys.path:
+    sys.path.insert(0, _proj_root)
+
 import joblib
 import numpy as np
 import pandas as pd
 from typing import Dict, Any, Tuple, Optional
 from ml.src.feature_engineering import engineer_features_44, create_feature_dataframe_44, MODEL_FEATURES_44
+
 
 # Authoritative class labels
 CLASS_LABELS = {
@@ -99,8 +107,12 @@ class Predictor:
         X = create_feature_dataframe_44(feats)
 
         # 2. Inference & Multi-Class Probability
-        pred_class = int(self._model.predict(X)[0])
-        probabilities = self._model.predict_proba(X)[0]  # shape: (3,)
+        import warnings
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=UserWarning)
+            pred_class = int(self._model.predict(X)[0])
+            probabilities = self._model.predict_proba(X)[0]  # shape: (3,)
+
 
         prob_normal = float(probabilities[0])
         prob_warning = float(probabilities[1])
