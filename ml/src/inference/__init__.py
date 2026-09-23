@@ -8,15 +8,21 @@ import sys
 from pathlib import Path
 
 # Ensure project root is in sys.path for robust cross-environment imports
-_proj_root = str(Path(__file__).resolve().parents[2])
+_proj_root = str(Path(__file__).resolve().parents[3])
 if _proj_root not in sys.path:
     sys.path.insert(0, _proj_root)
+_ml_root = str(Path(__file__).resolve().parents[2])
+if _ml_root not in sys.path:
+    sys.path.insert(0, _ml_root)
 
 import joblib
 import numpy as np
 import pandas as pd
 from typing import Dict, Any, Tuple, Optional
-from ml.src.feature_engineering import engineer_features_44, create_feature_dataframe_44, MODEL_FEATURES_44
+try:
+    from ml.src.feature_engineering import engineer_features_44, create_feature_dataframe_44, MODEL_FEATURES_44
+except ImportError:
+    from src.feature_engineering import engineer_features_44, create_feature_dataframe_44, MODEL_FEATURES_44
 
 
 # Authoritative class labels

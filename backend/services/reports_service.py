@@ -10,7 +10,10 @@ from reportlab.lib.units import inch
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 
-from db import query_all, query_one
+try:
+    from db import query_all, query_one
+except ImportError:
+    from backend.db import query_all, query_one
 
 class ReportsService:
     @staticmethod
