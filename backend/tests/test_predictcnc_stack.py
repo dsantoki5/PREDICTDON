@@ -271,7 +271,7 @@ class TestPredictCNCStack(unittest.TestCase):
             admin_name="New User",
             email=f"user_{unique_suffix}@example.com",
             username=username,
-            password="password123"
+            password="Password@123"
         )
         self.assertIsNotNone(new_user_id)
 
@@ -562,9 +562,71 @@ class TestPredictCNCStack(unittest.TestCase):
         execute_update("DELETE FROM predictions WHERE id = %s", (pred_id,))
         print(" -> TEST 16 (PDF Report Null-Safety Coalescing): PASS")
 
+    # -----------------------------------------------------------------
+    # TEST 17: Industrial Authentication Input & Password Complexity Validation
+    # -----------------------------------------------------------------
+    def test_17_auth_input_validation(self):
+        """Test 17: Strict validation for single-char/weak passwords, invalid emails, and usernames."""
+        import time
+        ts = int(time.time())
+
+        # 1. Reject 1-character password
+        with self.assertRaises(ValueError) as ctx:
+            AuthService.register_user("ACME Corp", "John", f"test_{ts}@acme.com", f"user_len_{ts}", ".")
+        self.assertIn("at least 8 characters", str(ctx.exception).lower())
+
+        # 2. Reject password lacking uppercase
+        with self.assertRaises(ValueError) as ctx:
+            AuthService.register_user("ACME Corp", "John", f"test_{ts}@acme.com", f"user_upper_{ts}", "password@123")
+        self.assertIn("uppercase", str(ctx.exception).lower())
+
+        # 3. Reject password lacking lowercase
+        with self.assertRaises(ValueError) as ctx:
+            AuthService.register_user("ACME Corp", "John", f"test_{ts}@acme.com", f"user_lower_{ts}", "PASSWORD@123")
+        self.assertIn("lowercase", str(ctx.exception).lower())
+
+        # 4. Reject password lacking digit
+        with self.assertRaises(ValueError) as ctx:
+            AuthService.register_user("ACME Corp", "John", f"test_{ts}@acme.com", f"user_digit_{ts}", "Password@XYZ")
+        self.assertIn("numeric digit", str(ctx.exception).lower())
+
+        # 5. Reject password lacking special character
+        with self.assertRaises(ValueError) as ctx:
+            AuthService.register_user("ACME Corp", "John", f"test_{ts}@acme.com", f"user_spec_{ts}", "Password123")
+        self.assertIn("special character", str(ctx.exception).lower())
+
+        # 6. Reject invalid email format
+        with self.assertRaises(ValueError) as ctx:
+            AuthService.register_user("ACME Corp", "John", "invalid_email_format", f"user_email_{ts}", "Password@123")
+        self.assertIn("valid email", str(ctx.exception).lower())
+
+        # 7. Reject invalid username
+        with self.assertRaises(ValueError) as ctx:
+            AuthService.register_user("ACME Corp", "John", f"test_{ts}@acme.com", "ab", "Password@123")
+        self.assertIn("between 3 and 50 characters", str(ctx.exception).lower())
+
+        # 8. Reject short company name
+        with self.assertRaises(ValueError) as ctx:
+            AuthService.register_user("A", "John", f"test_{ts}@acme.com", f"user_co_{ts}", "Password@123")
+        self.assertIn("company name", str(ctx.exception).lower())
+
+        # 9. API endpoint reject 1-char password
+        res = self.client.post("/api/auth/register", json={
+            "company_name": "Precision CNC",
+            "admin_name": "Supervisor",
+            "email": f"operator_{ts}@precision.com",
+            "username": f"op_{ts}",
+            "password": "."
+        })
+        self.assertEqual(res.status_code, 400)
+        self.assertIn("at least 8 characters", res.get_json()["detail"].lower())
+
+        print(" -> TEST 17 (Auth Input & Password Complexity Validation): PASS")
+
 
 if __name__ == "__main__":
     unittest.main()
+
 
 
 

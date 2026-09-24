@@ -1,6 +1,6 @@
 """
 PredictCNC Flask Application — Main Entry Point.
-Serving HTML5 + Bootstrap 5 UI & RESTful APIs powered by LightGBM & PyMySQL.
+Serving HTML5 + Bootstrap 5 UI & RESTful APIs powered by LightGBM & PostgreSQL.
 """
 import os
 import sys
@@ -16,7 +16,7 @@ if backend_dir not in sys.path:
 
 load_dotenv(os.path.join(backend_dir, ".env"))
 
-from db import init_db, seed_default_data, query_all, query_one, execute_insert
+from db import init_db, seed_default_data, query_all, query_one, execute_insert, get_active_db_info
 from services.auth_service import AuthService
 from services.machine_service import MachineService
 from services.prediction_service import PredictionService
@@ -113,6 +113,7 @@ def roles_required(*allowed_roles):
 def inject_user():
     return {
         "current_user": session.get("user"),
+        "active_db": get_active_db_info(),
         "now": datetime.now(),
         "str": str
     }
@@ -134,6 +135,9 @@ def login_page():
         company_name = request.form.get("company_name", "").strip()
         username = request.form.get("username", "").strip()
         password = request.form.get("password", "").strip()
+        if not username or not password:
+            flash("Please enter your username/email and password.", "warning")
+            return render_template("login.html")
         user = AuthService.authenticate_user(username, password, company_name=company_name)
         if user:
             session["user_id"] = user["id"]
@@ -229,10 +233,12 @@ def reports_page():
 @app.route("/api/health")
 def api_health():
     smtp_ready = EmailService.is_configured()
+    db_info = get_active_db_info()
     return jsonify({
         "status": "healthy",
         "service": "PredictCNC Flask Engine",
-        "stack": "Flask + MySQL + LightGBM + smtplib",
+        "database": db_info,
+        "stack": f"Flask + {db_info['driver']} + LightGBM + smtplib",
         "smtp_configured": smtp_ready,
         "timestamp": datetime.now().isoformat()
     })
@@ -241,8 +247,10 @@ def api_health():
 def api_login():
     data = request.get_json() or {}
     company_name = data.get("company_name", "").strip()
-    username = data.get("username", "")
+    username = data.get("username", "").strip()
     password = data.get("password", "")
+    if not username or not password:
+        return jsonify({"detail": "Username and password are required"}), 400
     user = AuthService.authenticate_user(username, password, company_name=company_name)
     if not user:
         return jsonify({"detail": "Invalid username or password"}), 401

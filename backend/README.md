@@ -1,12 +1,12 @@
-# PredictCNC — Backend API Service
+# PredictCNC — Backend Service
 
-FastAPI-powered REST API service providing predictive maintenance inference, fleet telemetry management, automated ticketing, and JWT authentication.
+Flask-powered service providing predictive maintenance inference, fleet telemetry management, automated ticketing, audit logging, and role-based access control.
 
 ## Features
-- **FastAPI 0.110+**: Asynchronous, auto-generating Swagger UI docs at `/docs`.
-- **SQLAlchemy 2.0**: Pluggable database support (default SQLite for dev, MariaDB/MySQL for production).
-- **Pydantic v2**: Strict validation for sensor readings and API contracts.
-- **ML Integration**: Seamless bridge to LightGBM model in `ml/models/`.
+- **Flask 3.0+**: Session-based authentication and REST APIs.
+- **PostgreSQL**: High-performance relational database persistence with psycopg2-binary.
+- **ML Integration**: Seamless bridge to LightGBM multi-class model with 44 physics features.
+- **Automated Alerts**: Non-blocking Gmail SMTP dispatch with cooldown duplicate suppression.
 
 ## Running Locally
 ```bash
@@ -14,14 +14,14 @@ FastAPI-powered REST API service providing predictive maintenance inference, fle
 pip install -r requirements.txt
 
 # 2. Configure environment
-cp .env.example .env
+# Ensure .env has PostgreSQL credentials (PG_HOST, PG_PORT, PG_USER, PG_PASSWORD, PG_DB)
 
 # 3. Start server
-uvicorn src.main:app --reload --port 8000
+python app.py
 ```
-Interactive docs: [http://localhost:8000/docs](http://localhost:8000/docs)
+Application interface: [http://localhost:5000](http://localhost:5000)
 
 ## Running Tests
 ```bash
-pytest
+python -m unittest discover -s tests
 ```

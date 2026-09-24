@@ -1,6 +1,6 @@
 """
 PredictCNC Prediction Service — Telemetry history rolling window calculation,
-LightGBM inference execution, persistence to MySQL, automated maintenance ticketing,
+LightGBM inference execution, persistence to PostgreSQL, automated maintenance ticketing,
 and non-blocking Gmail SMTP alerts dispatch.
 """
 from datetime import datetime
@@ -90,7 +90,7 @@ class PredictionService:
         temp_ratio = process_temperature / air_temperature if air_temperature != 0 else 1.0
         load_stress = torque * (torque / 100.0)
 
-        # Persist prediction to MySQL
+        # Persist prediction to PostgreSQL
         prediction_id = execute_insert(
             """INSERT INTO predictions (
                 machine_id, air_temperature, process_temperature, rotational_speed, torque, tool_wear,

@@ -1,6 +1,6 @@
 """
 PredictCNC Notification Service — Alert trigger evaluation, recipient resolution,
-duplicate suppression cooldown, and MySQL notification logging.
+duplicate suppression cooldown, and PostgreSQL notification logging.
 """
 import os
 import logging

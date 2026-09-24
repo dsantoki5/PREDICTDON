@@ -162,7 +162,9 @@
       <footer class="py-3 px-4 border-top text-center text-muted" style="border-color: var(--border-ink-line) !important; font-size: 0.75rem; background-color: var(--bg-ink-950);">
         <div class="d-flex flex-column flex-sm-row justify-content-between align-items-center gap-2">
           <div>PredictCNC &bull; AI Industrial Telemetry & Machine Health Diagnostics</div>
-          <div class="font-mono text-secondary">Flask &bull; MySQL &bull; LightGBM &bull; ReportLab &bull; Gmail SMTP</div>
+          <div class="font-mono text-secondary d-flex align-items-center gap-2">
+            <span>Flask &bull; <span class="badge bg-dark border border-secondary text-info fw-normal">{{ active_db.driver if active_db else 'DB' }}</span> &bull; LightGBM &bull; ReportLab &bull; Gmail SMTP</span>
+          </div>
         </div>
       </footer>
 

@@ -1,6 +1,6 @@
-# PredictCNC — MySQL Database Schema Specification
+# PredictCNC — PostgreSQL Database Schema Specification
 
-## Schema Design (MySQL / PyMySQL)
+## Schema Design (PostgreSQL / psycopg2)
 
 ```mermaid
 erDiagram

@@ -1,13 +1,13 @@
 # PredictCNC — System Architecture Specification
 
 ## 1. Overview
-PredictCNC is an academic/engineering predictive maintenance system built using the approved **Flask + Bootstrap + MySQL + LightGBM** technology stack.
+PredictCNC is an academic/engineering predictive maintenance system built using the approved **Flask + Bootstrap + PostgreSQL + LightGBM** technology stack.
 
 ```mermaid
 graph TD
     Client[HTML5 + CSS3 + Bootstrap 5 + Chart.js UI] -->|HTTP Form / REST| App[Flask Backend (app.py)]
     App -->|Inference Engine| MLEngine[LightGBM Multi-Class ML Predictor]
-    App -->|CRUD & Persistence| DB[(MySQL / PyMySQL Database)]
+    App -->|CRUD & Persistence| DB[(PostgreSQL Database)]
     App -->|Alert Dispatch| SMTP[Python smtplib + email.mime]
     SMTP -->|TLS 587| Gmail[Gmail SMTP Gateway]
     Gmail --> Supervisor[Machine Supervisor Email]
@@ -25,7 +25,7 @@ graph TD
 ### Backend
 - **Framework**: Python Flask
 - **Session & Auth**: Secure Flask Session with SHA-256 password hashing
-- **Database Driver**: PyMySQL (compatible with XAMPP MySQL)
+- **Database Driver**: psycopg2-binary (PostgreSQL Native Driver)
 - **PDF Engine**: ReportLab
 
 ### Machine Learning

@@ -126,21 +126,21 @@
           <!-- FORM 1: SIGN IN MODE (Default Active)      -->
           <!-- ========================================== -->
           <form id="formSignIn" method="POST" action="{{ url_for('login_page') }}" class="auth-form-panel">
-            <!-- Company Name (Optional) -->
-            <div>
-              <label class="form-label font-sans text-light small mb-1.5 fw-medium">Company Name</label>
-              <div class="login-input-group">
-                <i class="fa-solid fa-building login-input-icon"></i>
-                <input type="text" name="company_name" id="loginCompany" class="form-control login-form-input" placeholder="Enter your company name">
-              </div>
-            </div>
-
             <!-- Username or Email -->
             <div>
               <label class="form-label font-sans text-light small mb-1.5 fw-medium">Username or Email *</label>
               <div class="login-input-group">
                 <i class="fa-solid fa-user login-input-icon"></i>
                 <input type="text" name="username" id="loginUsername" class="form-control login-form-input" placeholder="Enter your username or email" required autofocus>
+              </div>
+            </div>
+
+            <!-- Company Name (Optional) -->
+            <div>
+              <label class="form-label font-sans text-light small mb-1.5 fw-medium">Company Name</label>
+              <div class="login-input-group">
+                <i class="fa-solid fa-building login-input-icon"></i>
+                <input type="text" name="company_name" id="loginCompany" class="form-control login-form-input" placeholder="Enter your company name">
               </div>
             </div>
 
@@ -196,8 +196,11 @@
                 <input type="text" id="regAdminName" class="form-control login-form-input ps-3" placeholder="Enter admin name" required>
               </div>
               <div class="col-6">
-                <label class="form-label font-sans text-light small mb-1 fw-medium">Username *</label>
-                <input type="text" id="regUsername" class="form-control login-form-input ps-3" placeholder="Enter username" required>
+                <div class="d-flex align-items-center justify-content-between mb-1">
+                  <label class="form-label font-sans text-light small m-0 fw-medium">Username *</label>
+                  <span id="regUsernameBadge" class="font-mono" style="font-size: 0.65rem;"></span>
+                </div>
+                <input type="text" id="regUsername" class="form-control login-form-input ps-3" placeholder="e.g. operator_1" required oninput="validateUsernameField(this.value)">
               </div>
             </div>
 
@@ -240,7 +243,7 @@
 
             <!-- Live Password Requirements Checklist -->
             <div id="regPwdChecklist" class="p-2.5 rounded-3 border border-secondary border-opacity-25 font-mono d-none" style="background: rgba(3, 7, 18, 0.95); font-size: 0.68rem;">
-              <div class="text-secondary text-uppercase fw-semibold mb-1" style="font-size: 0.62rem;">Password Requirements:</div>
+              <div class="text-secondary text-uppercase fw-semibold mb-1" style="font-size: 0.62rem;">PASSWORD REQUIREMENTS:</div>
               <div class="row g-1">
                 <div class="col-6" id="chkMinLength"><i class="fa-regular fa-circle text-secondary me-1"></i> Min 8 characters</div>
                 <div class="col-6" id="chkUpper"><i class="fa-regular fa-circle text-secondary me-1"></i> 1 Uppercase (A-Z)</div>
@@ -304,6 +307,18 @@
               </div>
             </div>
 
+            <!-- Live Password Requirements Checklist for Forgot Password -->
+            <div id="forgotPwdChecklist" class="p-2.5 rounded-3 border border-secondary border-opacity-25 font-mono d-none" style="background: rgba(3, 7, 18, 0.95); font-size: 0.68rem;">
+              <div class="text-secondary text-uppercase fw-semibold mb-1" style="font-size: 0.62rem;">PASSWORD REQUIREMENTS:</div>
+              <div class="row g-1">
+                <div class="col-6" id="chkForgotMinLength"><i class="fa-regular fa-circle text-secondary me-1"></i> Min 8 characters</div>
+                <div class="col-6" id="chkForgotUpper"><i class="fa-regular fa-circle text-secondary me-1"></i> 1 Uppercase (A-Z)</div>
+                <div class="col-6" id="chkForgotLower"><i class="fa-regular fa-circle text-secondary me-1"></i> 1 Lowercase (a-z)</div>
+                <div class="col-6" id="chkForgotDigit"><i class="fa-regular fa-circle text-secondary me-1"></i> 1 Number (0-9)</div>
+                <div class="col-12" id="chkForgotSpecial"><i class="fa-regular fa-circle text-secondary me-1"></i> 1 Special Character (!@#$%)</div>
+              </div>
+            </div>
+
             <!-- Submit Reset Button -->
             <button type="submit" id="btnForgotSubmit" class="btn-login-submit mt-2">
               <i class="fa-solid fa-key"></i>
@@ -314,7 +329,7 @@
           <!-- Bottom Security Subsystem Badge -->
           <div class="d-flex align-items-center justify-content-center gap-2 font-mono text-secondary mt-4 pt-3 border-top border-secondary border-opacity-25" style="font-size: 0.65rem; letter-spacing: 0.05em;">
             <i class="fa-solid fa-shield-halved text-success"></i>
-            <span>PyMySQL & LightGBM AI Industrial Telemetry Subsystem</span>
+            <span>{{ active_db.driver if active_db else 'Database' }} & LightGBM AI Industrial Telemetry Subsystem</span>
           </div>
 
         </div>
@@ -452,7 +467,7 @@ function validateEmailField(val) {
     badge.innerHTML = `<span class="text-warning">⚠ Typo: Use @${currentSuggestedTypo}?</span> <a href="javascript:void(0)" onclick="fixEmailTypo()" class="badge bg-danger text-white text-decoration-none ms-1">Fix</a>`;
   } else {
     currentSuggestedTypo = null;
-    const emailRegex = /^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z]{2,}$/;
+    const emailRegex = /^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$/;
     if (emailRegex.test(val.trim())) {
       badge.innerHTML = `<span class="text-success">✓ Valid</span>`;
     } else {
@@ -470,12 +485,31 @@ function fixEmailTypo() {
   }
 }
 
-// Password Complexity Check
+// Live Username Validation
+function validateUsernameField(val) {
+  const badge = document.getElementById('regUsernameBadge');
+  if (!badge) return;
+  if (!val) {
+    badge.innerHTML = '';
+    return;
+  }
+  const clean = val.trim();
+  const usernameRegex = /^[a-zA-Z0-9_.-]{3,50}$/;
+  if (usernameRegex.test(clean)) {
+    badge.innerHTML = `<span class="text-success">✓ Valid</span>`;
+  } else if (clean.length < 3) {
+    badge.innerHTML = `<span class="text-warning">⚠ Min 3 chars</span>`;
+  } else {
+    badge.innerHTML = `<span class="text-danger">✗ Letters/digits/._-</span>`;
+  }
+}
+
+// Password Complexity Check for Register
 function checkRegPasswordComplexity(pwd) {
   const box = document.getElementById('regPwdChecklist');
   if (!pwd) {
     if (box) box.classList.add('d-none');
-    return;
+    return false;
   }
   if (box) box.classList.remove('d-none');
 
@@ -492,6 +526,7 @@ function checkRegPasswordComplexity(pwd) {
   updateRequirementItem('chkSpecial', hasSpecial, '1 Special Character (!@#$%)');
 
   checkConfirmPasswordMatch();
+  return (hasMin && hasUpper && hasLower && hasDigit && hasSpecial);
 }
 
 function updateRequirementItem(id, valid, text) {
@@ -508,36 +543,61 @@ function checkConfirmPasswordMatch() {
   const p1 = document.getElementById('regPassword').value;
   const p2 = document.getElementById('regConfirmPassword').value;
   const badge = document.getElementById('confirmPassBadge');
-  if (!badge) return;
+  if (!badge) return false;
   if (!p2) {
     badge.innerHTML = '';
-    return;
+    return false;
   }
   if (p1 === p2) {
     badge.innerHTML = `<span class="text-success">✓ Match</span>`;
+    return true;
   } else {
     badge.innerHTML = `<span class="text-danger">✗ Differ</span>`;
+    return false;
   }
+}
+
+// Password Complexity & Match for Forgot Mode
+function checkForgotComplexity(pwd) {
+  const box = document.getElementById('forgotPwdChecklist');
+  if (!pwd) {
+    if (box) box.classList.add('d-none');
+    return false;
+  }
+  if (box) box.classList.remove('d-none');
+
+  const hasMin = pwd.length >= 8;
+  const hasUpper = /[A-Z]/.test(pwd);
+  const hasLower = /[a-z]/.test(pwd);
+  const hasDigit = /\d/.test(pwd);
+  const hasSpecial = /[!@#$%^&*(),.?":{}|<>\-_=+/\\\[\]`~]/.test(pwd);
+
+  updateRequirementItem('chkForgotMinLength', hasMin, 'Min 8 characters');
+  updateRequirementItem('chkForgotUpper', hasUpper, '1 Uppercase (A-Z)');
+  updateRequirementItem('chkForgotLower', hasLower, '1 Lowercase (a-z)');
+  updateRequirementItem('chkForgotDigit', hasDigit, '1 Number (0-9)');
+  updateRequirementItem('chkForgotSpecial', hasSpecial, '1 Special Character (!@#$%)');
+
+  checkForgotMatch();
+  return (hasMin && hasUpper && hasLower && hasDigit && hasSpecial);
 }
 
 function checkForgotMatch() {
   const p1 = document.getElementById('forgotNewPassword').value;
   const p2 = document.getElementById('forgotConfirmPassword').value;
   const badge = document.getElementById('forgotMatchBadge');
-  if (!badge) return;
+  if (!badge) return false;
   if (!p2) {
     badge.innerHTML = '';
-    return;
+    return false;
   }
   if (p1 === p2) {
     badge.innerHTML = `<span class="text-success">✓ Match</span>`;
+    return true;
   } else {
     badge.innerHTML = `<span class="text-danger">✗ Differ</span>`;
+    return false;
   }
-}
-
-function checkForgotComplexity(pwd) {
-  checkForgotMatch();
 }
 
 // Handle Remember Me on load
@@ -559,6 +619,8 @@ document.addEventListener('DOMContentLoaded', () => {
   if (formRegister) {
     formRegister.addEventListener('submit', async (e) => {
       e.preventDefault();
+      clearAlert();
+
       const company = document.getElementById('regCompany').value.trim();
       const name = document.getElementById('regAdminName').value.trim();
       const username = document.getElementById('regUsername').value.trim();
@@ -566,12 +628,56 @@ document.addEventListener('DOMContentLoaded', () => {
       const password = document.getElementById('regPassword').value;
       const confirmPass = document.getElementById('regConfirmPassword').value;
 
-      if (!company || !name || !username || !email || !password || !confirmPass) {
-        showAlert('Please fill in all required fields.');
+      // 1. Company Name validation
+      if (!company || company.length < 2) {
+        showAlert('Company name must be at least 2 characters long.');
+        document.getElementById('regCompany').focus();
         return;
       }
+
+      // 2. Admin Name validation
+      if (!name || name.length < 2) {
+        showAlert('Admin name must be at least 2 characters long.');
+        document.getElementById('regAdminName').focus();
+        return;
+      }
+
+      // 3. Username validation
+      const usernameRegex = /^[a-zA-Z0-9_.-]{3,50}$/;
+      if (!username || !usernameRegex.test(username)) {
+        showAlert('Username must be 3-50 characters (letters, numbers, underscores, dots, hyphens).');
+        document.getElementById('regUsername').focus();
+        return;
+      }
+
+      // 4. Email validation
+      const emailRegex = /^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$/;
+      if (!email || !emailRegex.test(email)) {
+        showAlert('Please enter a valid email address (e.g. operator@company.com).');
+        document.getElementById('regEmail').focus();
+        return;
+      }
+
+      // 5. Password Complexity Validation
+      const hasMin = password.length >= 8;
+      const hasUpper = /[A-Z]/.test(password);
+      const hasLower = /[a-z]/.test(password);
+      const hasDigit = /\d/.test(password);
+      const hasSpecial = /[!@#$%^&*(),.?":{}|<>\-_=+/\\\[\]`~]/.test(password);
+
+      if (!hasMin || !hasUpper || !hasLower || !hasDigit || !hasSpecial) {
+        const checklist = document.getElementById('regPwdChecklist');
+        if (checklist) checklist.classList.remove('d-none');
+        checkRegPasswordComplexity(password);
+        showAlert('Password must meet all 5 requirements: Min 8 chars, 1 uppercase, 1 lowercase, 1 number, and 1 special character (!@#$%).');
+        document.getElementById('regPassword').focus();
+        return;
+      }
+
+      // 6. Confirm Password Match Validation
       if (password !== confirmPass) {
-        showAlert('Passwords do not match. Please verify.');
+        showAlert('Passwords do not match. Please ensure both password fields match exactly.');
+        document.getElementById('regConfirmPassword').focus();
         return;
       }
 
@@ -609,17 +715,38 @@ document.addEventListener('DOMContentLoaded', () => {
   if (formForgot) {
     formForgot.addEventListener('submit', async (e) => {
       e.preventDefault();
+      clearAlert();
+
       const company = document.getElementById('forgotCompany').value.trim();
       const identifier = document.getElementById('forgotIdentifier').value.trim();
       const new_password = document.getElementById('forgotNewPassword').value;
       const confirmPass = document.getElementById('forgotConfirmPassword').value;
 
-      if (!identifier || !new_password || !confirmPass) {
-        showAlert('Please fill in all required fields.');
+      if (!identifier || identifier.length < 3) {
+        showAlert('Please enter your registered username or email address.');
+        document.getElementById('forgotIdentifier').focus();
         return;
       }
+
+      // Validate New Password Complexity
+      const hasMin = new_password.length >= 8;
+      const hasUpper = /[A-Z]/.test(new_password);
+      const hasLower = /[a-z]/.test(new_password);
+      const hasDigit = /\d/.test(new_password);
+      const hasSpecial = /[!@#$%^&*(),.?":{}|<>\-_=+/\\\[\]`~]/.test(new_password);
+
+      if (!hasMin || !hasUpper || !hasLower || !hasDigit || !hasSpecial) {
+        const checklist = document.getElementById('forgotPwdChecklist');
+        if (checklist) checklist.classList.remove('d-none');
+        checkForgotComplexity(new_password);
+        showAlert('New password must meet all requirements: Min 8 chars, 1 uppercase, 1 lowercase, 1 number, and 1 special character.');
+        document.getElementById('forgotNewPassword').focus();
+        return;
+      }
+
       if (new_password !== confirmPass) {
-        showAlert('New passwords do not match.');
+        showAlert('New passwords do not match. Please verify.');
+        document.getElementById('forgotConfirmPassword').focus();
         return;
       }
 
@@ -651,13 +778,29 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Handle Form Sign In submit (store remember me)
+  // Handle Form Sign In submit (store remember me + client validation)
   const formSignIn = document.getElementById('formSignIn');
   if (formSignIn) {
-    formSignIn.addEventListener('submit', () => {
-      const chk = document.getElementById('rememberMeCheckbox');
+    formSignIn.addEventListener('submit', (e) => {
       const comp = document.getElementById('loginCompany').value.trim();
       const user = document.getElementById('loginUsername').value.trim();
+      const pass = document.getElementById('loginPassword').value;
+
+      if (!user || user.length < 3) {
+        e.preventDefault();
+        showAlert('Please enter your username or registered email (at least 3 characters).');
+        document.getElementById('loginUsername').focus();
+        return;
+      }
+
+      if (!pass || pass.length < 1) {
+        e.preventDefault();
+        showAlert('Please enter your password.');
+        document.getElementById('loginPassword').focus();
+        return;
+      }
+
+      const chk = document.getElementById('rememberMeCheckbox');
       if (chk && chk.checked) {
         localStorage.setItem('predictcnc_remember_me', 'true');
         localStorage.setItem('predictcnc_remembered_company', comp);

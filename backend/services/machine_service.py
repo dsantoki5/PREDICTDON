@@ -62,8 +62,9 @@ class MachineService:
                 (user_id, code, name, department, manufacturer, installation_date, supervisor_name, supervisor_email, datetime.now())
             )
         except Exception as e:
-            if "UNIQUE constraint failed" in str(e) or "Duplicate entry" in str(e):
-                raise ValueError(f"Asset code '{code}' is already registered in the system. Please use a unique machine identifier.")
+            err_msg = str(e).lower()
+            if "duplicate key" in err_msg or "unique constraint" in err_msg or "unique constraint failed" in err_msg or "duplicate entry" in err_msg:
+                raise ValueError(f"Asset code '{code}' already exists in your fleet. Please specify a unique machine identifier.")
             raise
 
     @staticmethod

@@ -1,6 +1,5 @@
 """
-PredictCNC Database Seeder — Populates initial users, machines, predictions, and tickets.
-Compatible with PyMySQL / MySQL and fallback SQLite.
+PredictCNC Database Seeder — Populates initial users, machines, predictions, and tickets into PostgreSQL.
 """
 import os
 import json

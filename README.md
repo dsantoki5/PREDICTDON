@@ -25,7 +25,7 @@ PredictCNC is strictly built using the following approved engineering and academ
 - **Joblib**
 
 ### Database
-- **MySQL & PyMySQL** (Native compatibility with XAMPP MySQL `localhost:3306` with resilient SQLite fallback)
+- **PostgreSQL & psycopg2-binary** (Native relational database on `localhost:5432`)
 
 ### Visualization
 - **Chart.js** (Interactive health gauges and telemetry trend charts)
@@ -42,7 +42,7 @@ PredictCNC is strictly built using the following approved engineering and academ
 ### Development Environment
 - **Visual Studio Code**
 - **Git & GitHub**
-- **XAMPP (Apache + MySQL)**
+- **PostgreSQL Server (Port 5432)**
 
 ---
 
@@ -55,7 +55,7 @@ HTML5 + CSS3 + JavaScript + Bootstrap 5 + Chart.js
         ↓ (HTTP / REST)
 Python Flask (app.py)
         ↓
-MySQL / PyMySQL Database (XAMPP)
+PostgreSQL Database (psycopg2)
         ↓
 Feature Engineering (44 Dynamic Physics Dimensions)
         ↓
@@ -73,7 +73,7 @@ Machine Health Classification
 
 ### Prerequisites
 - Python 3.10+ installed
-- XAMPP (MySQL running on port 3306) or local MySQL
+- PostgreSQL (running on port 5432)
 
 ### Installation
 
@@ -93,12 +93,12 @@ Machine Health Classification
    FLASK_ENV=development
    FLASK_PORT=5000
 
-   # MySQL (XAMPP default)
-   MYSQL_HOST=localhost
-   MYSQL_PORT=3306
-   MYSQL_USER=root
-   MYSQL_PASSWORD=
-   MYSQL_DB=predictcnc
+   # PostgreSQL Configuration
+   PG_HOST=localhost
+   PG_PORT=5432
+   PG_USER=postgres
+   PG_PASSWORD=your_postgres_password
+   PG_DB=predictcnc
 
    # Gmail SMTP Configuration
    SMTP_HOST=smtp.gmail.com

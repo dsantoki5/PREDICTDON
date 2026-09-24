@@ -1,11 +1,11 @@
 {% extends "base.html" %}
 
-{% block title %}Register Company — PredictCNC AI Maintenance{% endblock %}
+{% block title %}Register Organization — PredictCNC AI Maintenance{% endblock %}
 
 {% block auth_content %}
 <div class="container py-5">
   <div class="row justify-content-center">
-    <div class="col-12 col-sm-10 col-md-7 col-lg-5">
+    <div class="col-12 col-sm-10 col-md-8 col-lg-6">
       
       <div class="text-center mb-4">
         <div class="d-inline-flex brand-icon p-3 mb-2" style="width: 56px; height: 56px; border-radius: 14px; font-size: 1.65rem;">
@@ -20,36 +20,74 @@
           <h5 class="fw-bold text-white mb-1 font-display">Register Organization</h5>
           <span class="text-muted small">Create administrator account to monitor your plant machinery</span>
         </div>
+
+        <div id="standaloneAlertBox" class="d-none p-3 mb-3 rounded-3 font-mono text-xs d-flex align-items-center gap-2"></div>
         
-        <form method="POST" action="{{ url_for('register_page') }}">
+        <form id="standaloneRegisterForm" method="POST" action="{{ url_for('register_page') }}">
           <div class="mb-3">
-            <label class="form-label font-mono small text-muted">Company / Facility Name</label>
-            <input type="text" name="company_name" class="form-control form-control-cnc" placeholder="e.g. Precision CNC Systems" required>
+            <label class="form-label font-mono small text-muted">Company / Facility Name *</label>
+            <input type="text" name="company_name" id="standaloneCompany" class="form-control form-control-cnc" placeholder="e.g. Precision CNC Systems" required minlength="2">
           </div>
 
-          <div class="row">
-            <div class="col-md-6 mb-3">
-              <label class="form-label font-mono small text-muted">Administrator Name</label>
-              <input type="text" name="admin_name" class="form-control form-control-cnc" placeholder="Enter administrator name" required>
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label class="form-label font-mono small text-muted">Administrator Name *</label>
+              <input type="text" name="admin_name" id="standaloneAdmin" class="form-control form-control-cnc" placeholder="Enter administrator name" required minlength="2">
             </div>
-            <div class="col-md-6 mb-3">
-              <label class="form-label font-mono small text-muted">Alert Notification Email</label>
-              <input type="email" name="email" class="form-control form-control-cnc" placeholder="admin@company.com" required>
-            </div>
-          </div>
-
-          <div class="row">
-            <div class="col-md-6 mb-3">
-              <label class="form-label font-mono small text-muted">Username</label>
-              <input type="text" name="username" class="form-control form-control-cnc" placeholder="Enter unique username" required>
-            </div>
-            <div class="col-md-6 mb-3">
-              <label class="form-label font-mono small text-muted">Password</label>
-              <input type="password" name="password" class="form-control form-control-cnc" placeholder="••••••••" required>
+            <div class="col-md-6">
+              <div class="d-flex justify-content-between align-items-center">
+                <label class="form-label font-mono small text-muted mb-0">Username *</label>
+                <span id="standaloneUserBadge" class="font-mono" style="font-size: 0.65rem;"></span>
+              </div>
+              <input type="text" name="username" id="standaloneUsername" class="form-control form-control-cnc" placeholder="e.g. operator_1" required oninput="checkStandaloneUsername(this.value)">
             </div>
           </div>
 
-          <button type="submit" class="btn btn-cnc-primary w-100 py-2.5 mt-2">
+          <div class="mb-3">
+            <div class="d-flex justify-content-between align-items-center">
+              <label class="form-label font-mono small text-muted mb-0">Alert Notification Email *</label>
+              <span id="standaloneEmailBadge" class="font-mono" style="font-size: 0.65rem;"></span>
+            </div>
+            <input type="email" name="email" id="standaloneEmail" class="form-control form-control-cnc" placeholder="admin@company.com" required oninput="checkStandaloneEmail(this.value)">
+          </div>
+
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label class="form-label font-mono small text-muted">Password *</label>
+              <div class="position-relative">
+                <input type="password" name="password" id="standalonePassword" class="form-control form-control-cnc pe-5" placeholder="••••••••" required oninput="checkStandalonePassword(this.value)">
+                <button type="button" class="btn btn-sm btn-link position-absolute end-0 top-50 translate-middle-y text-secondary text-decoration-none pe-2" onclick="togglePasswordVisibility('standalonePassword', 'standaloneEye1')">
+                  <i class="fa-solid fa-eye" id="standaloneEye1"></i>
+                </button>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="d-flex justify-content-between align-items-center">
+                <label class="form-label font-mono small text-muted mb-0">Confirm Password *</label>
+                <span id="standaloneMatchBadge" class="font-mono" style="font-size: 0.65rem;"></span>
+              </div>
+              <div class="position-relative">
+                <input type="password" name="confirm_password" id="standaloneConfirmPassword" class="form-control form-control-cnc pe-5" placeholder="••••••••" required oninput="checkStandaloneMatch()">
+                <button type="button" class="btn btn-sm btn-link position-absolute end-0 top-50 translate-middle-y text-secondary text-decoration-none pe-2" onclick="togglePasswordVisibility('standaloneConfirmPassword', 'standaloneEye2')">
+                  <i class="fa-solid fa-eye" id="standaloneEye2"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Password Checklist -->
+          <div id="standalonePwdChecklist" class="p-2.5 rounded-3 border border-secondary border-opacity-25 font-mono mb-3 d-none" style="background: rgba(3, 7, 18, 0.95); font-size: 0.68rem;">
+            <div class="text-secondary text-uppercase fw-semibold mb-1" style="font-size: 0.62rem;">PASSWORD REQUIREMENTS:</div>
+            <div class="row g-1">
+              <div class="col-6" id="sChkMin"><i class="fa-regular fa-circle text-secondary me-1"></i> Min 8 characters</div>
+              <div class="col-6" id="sChkUpper"><i class="fa-regular fa-circle text-secondary me-1"></i> 1 Uppercase (A-Z)</div>
+              <div class="col-6" id="sChkLower"><i class="fa-regular fa-circle text-secondary me-1"></i> 1 Lowercase (a-z)</div>
+              <div class="col-6" id="sChkDigit"><i class="fa-regular fa-circle text-secondary me-1"></i> 1 Number (0-9)</div>
+              <div class="col-12" id="sChkSpecial"><i class="fa-regular fa-circle text-secondary me-1"></i> 1 Special Character (!@#$%)</div>
+            </div>
+          </div>
+
+          <button type="submit" id="btnStandaloneSubmit" class="btn btn-cnc-primary w-100 py-2.5 mt-2">
             <i class="fa-solid fa-user-plus"></i> Create Organization Account
           </button>
         </form>
@@ -62,4 +100,159 @@
     </div>
   </div>
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function togglePasswordVisibility(inputId, iconId) {
+  const input = document.getElementById(inputId);
+  const icon = document.getElementById(iconId);
+  if (!input || !icon) return;
+  if (input.type === 'password') {
+    input.type = 'text';
+    icon.classList.remove('fa-eye');
+    icon.classList.add('fa-eye-slash');
+  } else {
+    input.type = 'password';
+    icon.classList.remove('fa-eye-slash');
+    icon.classList.add('fa-eye');
+  }
+}
+
+function showStandaloneAlert(msg, type = 'danger') {
+  const box = document.getElementById('standaloneAlertBox');
+  if (!box) return;
+  box.classList.remove('d-none');
+  const isSuccess = type === 'success';
+  box.style.background = isSuccess ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)';
+  box.style.border = isSuccess ? '1px solid #34d399' : '1px solid #f87171';
+  box.style.color = isSuccess ? '#a7f3d0' : '#fecaca';
+  box.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-danger fs-6"></i><span>${msg}</span>`;
+}
+
+function checkStandaloneUsername(val) {
+  const badge = document.getElementById('standaloneUserBadge');
+  if (!badge) return;
+  const clean = (val || '').trim();
+  if (!clean) { badge.innerHTML = ''; return; }
+  const regex = /^[a-zA-Z0-9_.-]{3,50}$/;
+  if (regex.test(clean)) {
+    badge.innerHTML = `<span class="text-success">✓ Valid</span>`;
+  } else if (clean.length < 3) {
+    badge.innerHTML = `<span class="text-warning">⚠ Min 3 chars</span>`;
+  } else {
+    badge.innerHTML = `<span class="text-danger">✗ Invalid</span>`;
+  }
+}
+
+function checkStandaloneEmail(val) {
+  const badge = document.getElementById('standaloneEmailBadge');
+  if (!badge) return;
+  const clean = (val || '').trim();
+  if (!clean) { badge.innerHTML = ''; return; }
+  const regex = /^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$/;
+  if (regex.test(clean)) {
+    badge.innerHTML = `<span class="text-success">✓ Valid</span>`;
+  } else {
+    badge.innerHTML = `<span class="text-warning">⚠ Incomplete</span>`;
+  }
+}
+
+function checkStandalonePassword(pwd) {
+  const box = document.getElementById('standalonePwdChecklist');
+  if (!pwd) {
+    if (box) box.classList.add('d-none');
+    return false;
+  }
+  if (box) box.classList.remove('d-none');
+
+  const hasMin = pwd.length >= 8;
+  const hasUpper = /[A-Z]/.test(pwd);
+  const hasLower = /[a-z]/.test(pwd);
+  const hasDigit = /\d/.test(pwd);
+  const hasSpecial = /[!@#$%^&*(),.?":{}|<>\-_=+/\\\[\]`~]/.test(pwd);
+
+  const update = (id, valid, text) => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = valid ? `<i class="fa-solid fa-circle-check text-success me-1"></i> <span class="text-success">${text}</span>` : `<i class="fa-regular fa-circle text-secondary me-1"></i> <span class="text-secondary">${text}</span>`;
+  };
+
+  update('sChkMin', hasMin, 'Min 8 characters');
+  update('sChkUpper', hasUpper, '1 Uppercase (A-Z)');
+  update('sChkLower', hasLower, '1 Lowercase (a-z)');
+  update('sChkDigit', hasDigit, '1 Number (0-9)');
+  update('sChkSpecial', hasSpecial, '1 Special Character (!@#$%)');
+
+  checkStandaloneMatch();
+  return (hasMin && hasUpper && hasLower && hasDigit && hasSpecial);
+}
+
+function checkStandaloneMatch() {
+  const p1 = document.getElementById('standalonePassword').value;
+  const p2 = document.getElementById('standaloneConfirmPassword').value;
+  const badge = document.getElementById('standaloneMatchBadge');
+  if (!badge) return false;
+  if (!p2) { badge.innerHTML = ''; return false; }
+  if (p1 === p2) {
+    badge.innerHTML = `<span class="text-success">✓ Match</span>`;
+    return true;
+  } else {
+    badge.innerHTML = `<span class="text-danger">✗ Differ</span>`;
+    return false;
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const form = document.getElementById('standaloneRegisterForm');
+  if (form) {
+    form.addEventListener('submit', (e) => {
+      const comp = document.getElementById('standaloneCompany').value.trim();
+      const admin = document.getElementById('standaloneAdmin').value.trim();
+      const user = document.getElementById('standaloneUsername').value.trim();
+      const email = document.getElementById('standaloneEmail').value.trim();
+      const pwd = document.getElementById('standalonePassword').value;
+      const confirmPwd = document.getElementById('standaloneConfirmPassword').value;
+
+      if (comp.length < 2) {
+        e.preventDefault();
+        showStandaloneAlert('Company name must be at least 2 characters.');
+        document.getElementById('standaloneCompany').focus();
+        return;
+      }
+      if (admin.length < 2) {
+        e.preventDefault();
+        showStandaloneAlert('Admin name must be at least 2 characters.');
+        document.getElementById('standaloneAdmin').focus();
+        return;
+      }
+      const userRegex = /^[a-zA-Z0-9_.-]{3,50}$/;
+      if (!userRegex.test(user)) {
+        e.preventDefault();
+        showStandaloneAlert('Username must be 3-50 characters (letters, numbers, underscores, dots, hyphens).');
+        document.getElementById('standaloneUsername').focus();
+        return;
+      }
+      const emailRegex = /^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$/;
+      if (!emailRegex.test(email)) {
+        e.preventDefault();
+        showStandaloneAlert('Please enter a valid email address.');
+        document.getElementById('standaloneEmail').focus();
+        return;
+      }
+      if (!checkStandalonePassword(pwd)) {
+        e.preventDefault();
+        showStandaloneAlert('Password must meet all 5 requirements (min 8 characters, uppercase, lowercase, number, special character).');
+        document.getElementById('standalonePassword').focus();
+        return;
+      }
+      if (pwd !== confirmPwd) {
+        e.preventDefault();
+        showStandaloneAlert('Passwords do not match. Please verify.');
+        document.getElementById('standaloneConfirmPassword').focus();
+        return;
+      }
+    });
+  }
+});
+</script>
 {% endblock %}
