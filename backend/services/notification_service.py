@@ -19,49 +19,61 @@ logger = logging.getLogger("predictcnc.notifications")
 
 class NotificationService:
     @staticmethod
-    def resolve_recipient(machine: Dict[str, Any]) -> tuple[Optional[str], Optional[str]]:
+    def resolve_recipient(machine: Dict[str, Any], user_id: Optional[int] = None) -> tuple[Optional[str], Optional[str]]:
         """
-        Resolves the recipient email and name for a machine:
-        1. machine['supervisor_email'] if configured
-        2. Machine owner user email from users table
-        3. DEFAULT_SUPERVISOR_EMAIL fallback from .env
+        Resolves the recipient email and name for a machine alert.
+        Prioritizes the signed-in user / account owner's registered email so that
+        alerts are dispatched directly to the active operator/administrator.
         """
-        supervisor_email = (machine.get("supervisor_email") or "").strip()
-        supervisor_name = (machine.get("supervisor_name") or "").strip()
+        target_user_id = user_id or machine.get("user_id")
+        user = query_one("SELECT * FROM users WHERE id = %s", (target_user_id,)) if target_user_id else None
 
-        # If not set or is generic default, check owner user account
-        user_id = machine.get("user_id")
-        user = query_one("SELECT * FROM users WHERE id = %s", (user_id,)) if user_id else None
+        recipient_email = None
+        recipient_name = None
 
-        if not supervisor_email or "supervisor@predictcnc.local" in supervisor_email.lower():
-            if user and user.get("email") and "@" in user.get("email"):
-                supervisor_email = user["email"].strip()
-                supervisor_name = user.get("admin_name") or user.get("username") or supervisor_name
+        if user and user.get("email") and "@" in user.get("email"):
+            recipient_email = user["email"].strip()
+            recipient_name = user.get("admin_name") or user.get("username")
 
-        if not supervisor_name and user:
-            supervisor_name = user.get("admin_name") or user.get("username")
+        # Fallback to machine supervisor_email if no registered user email found
+        if not recipient_email:
+            sup_email = (machine.get("supervisor_email") or "").strip()
+            if sup_email and "@" in sup_email and "supervisor@predictcnc.local" not in sup_email.lower():
+                recipient_email = sup_email
+                recipient_name = (machine.get("supervisor_name") or "").strip()
 
-        if not supervisor_email:
+        # Fallback to DEFAULT_SUPERVISOR_EMAIL from .env
+        if not recipient_email:
             default_email = os.getenv("DEFAULT_SUPERVISOR_EMAIL", "").strip()
-            if default_email:
-                supervisor_email = default_email
+            if default_email and "@" in default_email:
+                recipient_email = default_email
 
-        return supervisor_email, (supervisor_name or "Machine Supervisor")
+        return recipient_email, (recipient_name or "Machine Supervisor")
 
     @classmethod
     def dispatch_alert_if_needed(
         cls,
         machine: Dict[str, Any],
         prediction_result: Dict[str, Any],
-        sensor_data: Dict[str, Any]
+        sensor_data: Dict[str, Any],
+        user_id: Optional[int] = None
     ) -> Dict[str, Any]:
         """
         Evaluates prediction result and dispatches Warning or Critical alerts.
         Guaranteed to never raise unhandled exceptions (will never break predictions).
         """
         try:
-            is_critical = bool(prediction_result.get("is_failure") or prediction_result.get("predicted_class") == 2)
-            is_warning = bool(prediction_result.get("is_warning") or prediction_result.get("predicted_class") == 1 or prediction_result.get("failure_probability", 0) > 35.0)
+            is_critical = bool(
+                prediction_result.get("is_failure") or 
+                prediction_result.get("predicted_class") == 2 or
+                prediction_result.get("suggested_machine_status") == "Critical"
+            )
+            is_warning = bool(
+                prediction_result.get("is_warning") or 
+                prediction_result.get("predicted_class") == 1 or 
+                prediction_result.get("failure_probability", 0) > 25.0 or
+                prediction_result.get("suggested_machine_status") == "Warning"
+            )
 
             # Rule 1: NORMAL -> No Email
             if not is_critical and not is_warning:
@@ -74,7 +86,7 @@ class NotificationService:
 
             alert_type = "CRITICAL" if is_critical else "WARNING"
             health_status = "Critical" if is_critical else "Warning"
-            recipient_email, recipient_name = cls.resolve_recipient(machine)
+            recipient_email, recipient_name = cls.resolve_recipient(machine, user_id=user_id)
 
             machine_id = machine.get("id")
 
@@ -92,16 +104,16 @@ class NotificationService:
                     "message": "Machine alert detected, but no recipient email configured."
                 }
 
-            # Rule 2: Duplicate alert suppression cooldown
+            # Rule 2: Duplicate alert suppression cooldown (scoped to recipient & alert type)
             cooldown_minutes = int(os.getenv("SMTP_ALERT_COOLDOWN_MINUTES", 15))
             cutoff_time = datetime.now() - timedelta(minutes=cooldown_minutes)
 
             recent_sent = query_one(
-                "SELECT * FROM notification_logs WHERE machine_id = %s AND delivery_status = 'SENT' AND sent_at >= %s ORDER BY sent_at DESC LIMIT 1",
-                (machine_id, cutoff_time)
+                "SELECT * FROM notification_logs WHERE machine_id = %s AND LOWER(recipient_email) = LOWER(%s) AND delivery_status = 'SENT' AND sent_at >= %s ORDER BY sent_at DESC LIMIT 1",
+                (machine_id, recipient_email, cutoff_time)
             )
 
-            # If recent was sent and not escalating from WARNING to CRITICAL, suppress duplicate
+            # If recent was sent to this recipient and not escalating from WARNING to CRITICAL, suppress duplicate
             if recent_sent and not (recent_sent.get("alert_type") == "WARNING" and alert_type == "CRITICAL"):
                 execute_insert(
                     "INSERT INTO notification_logs (machine_id, recipient_email, alert_type, health_status, prediction, delivery_status, error_message, sent_at) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",

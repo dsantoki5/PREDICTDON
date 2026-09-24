@@ -147,7 +147,8 @@ class PredictionService:
         notification_info = NotificationService.dispatch_alert_if_needed(
             machine=machine,
             prediction_result=result_with_conf,
-            sensor_data=sensor_data
+            sensor_data=sensor_data,
+            user_id=user_id
         )
 
         return {
